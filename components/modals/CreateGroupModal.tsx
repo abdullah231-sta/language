@@ -2,12 +2,17 @@
 "use client";
 
 import { useState } from 'react';
+import { useUser } from '@/context/UserContext';
 
 // Define the shape of the new group data
 export interface GroupData {
   name: string;
   language: string;
   description: string;
+  owner: {
+    name: string;
+    avatarUrl: string | null;
+  };
 }
 
 interface CreateGroupModalProps {
@@ -17,6 +22,9 @@ interface CreateGroupModalProps {
 }
 
 const CreateGroupModal = ({ isOpen, onClose, onCreateGroup }: CreateGroupModalProps) => {
+  // Get current user from context
+  const { username, avatar } = useUser();
+  
   // State for each input field
   const [name, setName] = useState('');
   const [language, setLanguage] = useState('Japanese'); // Default value
@@ -31,8 +39,16 @@ const CreateGroupModal = ({ isOpen, onClose, onCreateGroup }: CreateGroupModalPr
       return;
     }
     
-    // Pass the data up to the home page
-    onCreateGroup({ name, language, description });
+    // Pass the data up to the home page, including owner information
+    onCreateGroup({ 
+      name, 
+      language, 
+      description,
+      owner: {
+        name: username,
+        avatarUrl: avatar
+      }
+    });
 
     // Reset fields and close modal
     setName('');

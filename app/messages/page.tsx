@@ -7,53 +7,31 @@ import { useSearchParams } from 'next/navigation';
 import ConversationListItem from "@/components/ConversationListItem";
 import MessageBubble from "@/components/MessageBubble";
 import DeleteConversationModal from "@/components/modals/DeleteConversationModal";
+import { useMessaging } from "@/context/MessagingContext";
 import { FaPaperPlane, FaSearch, FaTrash } from "react-icons/fa";
 
-// Full, valid initial data
-const initialConversations = [
-  { 
-    id: 1, 
-    name: 'Elena Rodriguez', 
-    avatarUrl: 'https://randomuser.me/api/portraits/women/44.jpg', 
-    messages: [
-      { sender: 'Elena', text: 'Hey!' }, 
-      { sender: 'Me', text: 'Hi Elena!' }
-    ] 
-  },
-  { 
-    id: 2, 
-    name: 'Kenji Tanaka', 
-    avatarUrl: 'https://randomuser.me/api/portraits/men/32.jpg', 
-    messages: [
-      { sender: 'Kenji', text: 'ありがとう！' }
-    ] 
-  },
-  { 
-    id: 3, 
-    name: 'Fatima Al-Fassi', 
-    avatarUrl: 'https://randomuser.me/api/portraits/women/22.jpg',
-    messages: [
-      { sender: 'Fatima', text: 'Can you explain the difference?' },
-    ]
-  },
-];
-
 const MessagesPage = () => {
-  const [conversations, setConversations] = useState(initialConversations);
-  const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
+  const { conversations, addMessage } = useMessaging();
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
 
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    const targetUser = searchParams.get('chatWith');
-    if (targetUser) {
+    const chatParam = searchParams.get('chat');
+    const nameParam = searchParams.get('name');
+    
+    if (chatParam) {
+      // Find conversation by participant ID
       const conversationToOpen = conversations.find(
-        convo => convo.name.toLowerCase().replace(' ', '-') === targetUser
+        convo => convo.participantId === chatParam
       );
       if (conversationToOpen) {
         setActiveConversationId(conversationToOpen.id);
+      } else if (nameParam) {
+        // Create new conversation if it doesn't exist
+        setActiveConversationId(`conv-${chatParam}`);
       }
     } else if (conversations.length > 0 && activeConversationId === null) {
       setActiveConversationId(conversations[0].id);
@@ -65,13 +43,8 @@ const MessagesPage = () => {
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !activeConversation) return;
-    const message = { sender: 'Me', text: newMessage };
-    const updatedConversations = conversations.map(convo => 
-      convo.id === activeConversationId 
-        ? { ...convo, messages: [...convo.messages, message] } 
-        : convo
-    );
-    setConversations(updatedConversations);
+    
+    addMessage(activeConversation.participantId, activeConversation.participantName, activeConversation.participantAvatar, 'Me', newMessage);
     setNewMessage("");
   };
 
@@ -80,20 +53,13 @@ const MessagesPage = () => {
   };
 
   const handleDeleteMessage = (messageIndex: number) => {
-    if (!activeConversation) return;
-    const updatedMessages = activeConversation.messages.filter((_, index) => index !== messageIndex);
-    const updatedConversations = conversations.map(convo => 
-      convo.id === activeConversationId 
-        ? { ...convo, messages: updatedMessages } 
-        : convo
-    );
-    setConversations(updatedConversations);
+    // For now, we'll just show an alert - this would need to be implemented in the context
+    alert("Delete message functionality would be implemented here");
   };
 
   const confirmDeleteConversation = () => {
-    const updatedConversations = conversations.filter(convo => convo.id !== activeConversationId);
-    setConversations(updatedConversations);
-    setActiveConversationId(null);
+    // For now, we'll just show an alert - this would need to be implemented in the context
+    alert("Delete conversation functionality would be implemented here");
     setDeleteModalOpen(false);
   };
 
@@ -113,9 +79,9 @@ const MessagesPage = () => {
             {conversations.map((convo) => (
               <div key={convo.id} onClick={() => setActiveConversationId(convo.id)}>
                 <ConversationListItem 
-                  name={convo.name}
+                  name={convo.participantName}
                   lastMessage={convo.messages[convo.messages.length - 1]?.text || "No messages yet"}
-                  avatarUrl={convo.avatarUrl}
+                  avatarUrl={convo.participantAvatar}
                   isActive={convo.id === activeConversationId}
                 />
               </div>
@@ -126,12 +92,12 @@ const MessagesPage = () => {
         {/* Right Pane */}
         {activeConversation ? (
           <div className="w-2/3 flex flex-col">
-            <Link href={`/profile/${activeConversation.name.toLowerCase().replace(' ', '-')}`}>
+            <Link href={`/profile/${activeConversation.participantName.toLowerCase().replace(' ', '-')}`}>
               <div className="p-4 border-b flex items-center justify-between hover:bg-gray-50 cursor-pointer">
                 <div className="flex items-center">
-                  <img src={activeConversation.avatarUrl} alt={activeConversation.name} className="w-10 h-10 rounded-full object-cover mr-4" />
+                  <img src={activeConversation.participantAvatar} alt={activeConversation.participantName} className="w-10 h-10 rounded-full object-cover mr-4" />
                   <div>
-                    <h3 className="font-semibold text-lg">{activeConversation.name}</h3>
+                    <h3 className="font-semibold text-lg">{activeConversation.participantName}</h3>
                     <p className="text-sm text-green-500">Online</p>
                   </div>
                 </div>
@@ -163,7 +129,7 @@ const MessagesPage = () => {
               <div className="flex items-center">
                 <input 
                   type="text" 
-                  placeholder={`Message ${activeConversation.name}...`} 
+                  placeholder={`Message ${activeConversation.participantName}...`} 
                   className="flex-1 p-3 border rounded-l-lg text-gray-900"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
@@ -182,7 +148,7 @@ const MessagesPage = () => {
           isOpen={isDeleteModalOpen}
           onClose={() => setDeleteModalOpen(false)}
           onConfirm={confirmDeleteConversation}
-          conversationName={activeConversation.name}
+          conversationName={activeConversation.participantName}
         />
       )}
     </>

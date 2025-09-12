@@ -27,11 +27,12 @@ const GroupCard = ({ id, name, language, memberCount, description }: GroupCardPr
             <FaUsers className="mr-2" />
             <span>{memberCount} members</span>
           </div>
-          {/* Add e.preventDefault() to stop the Link from firing when the button is clicked */}
+          {/* Modified join button to navigate to group page */}
           <button 
             onClick={(e) => {
               e.preventDefault(); 
-              alert(`Joining ${name}...`);
+              // Navigate to the group page instead of showing alert
+              window.location.href = `/groups/${id}?join=listener`;
             }} 
             className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition z-10"
           >

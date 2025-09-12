@@ -1,15 +1,20 @@
 // components/MemberAvatar.tsx
 
 import { FaCrown, FaPlus } from 'react-icons/fa';
+import { getFlagEmoji } from '@/utils/flags';
 
 interface MemberAvatarProps {
   name: string;
   avatarUrl?: string;
   isHost?: boolean;
   isInvite?: boolean;
+  isOwner?: boolean;
+  isSpeaker?: boolean;
+  isPurpleCrownAdmin?: boolean;
+  nationality?: string;
 }
 
-const MemberAvatar = ({ name, avatarUrl, isHost = false, isInvite = false }: MemberAvatarProps) => {
+const MemberAvatar = ({ name, avatarUrl, isHost = false, isInvite = false, isOwner = false, isSpeaker = false, isPurpleCrownAdmin = false, nationality }: MemberAvatarProps) => {
   // If this is the "Invite" button
   if (isInvite) {
     return (
@@ -27,7 +32,27 @@ const MemberAvatar = ({ name, avatarUrl, isHost = false, isInvite = false }: Mem
     <div className="flex flex-col items-center text-center">
       <div className="relative w-20 h-20 mb-2">
         <img src={avatarUrl} alt={name} className="w-full h-full rounded-full object-cover border-2 border-gray-600" />
-        {isHost && (
+        {nationality && (
+          <div className="absolute -bottom-1 -right-1 text-lg">
+            {getFlagEmoji(nationality)}
+          </div>
+        )}
+        {isOwner && (
+          <div className="absolute -top-2 -right-2 bg-yellow-500 p-1.5 rounded-full border-2 border-yellow-300 shadow-lg">
+            <FaCrown className="text-yellow-100 text-sm" />
+          </div>
+        )}
+        {isPurpleCrownAdmin && !isOwner && (
+          <div className="absolute -top-2 -right-2 bg-purple-500 p-1.5 rounded-full border-2 border-purple-300 shadow-lg">
+            <FaCrown className="text-purple-100 text-sm" />
+          </div>
+        )}
+        {isSpeaker && !isOwner && (
+          <div className="absolute -top-2 -right-2 bg-green-500 p-1 rounded-full border-2 border-green-300">
+            <div className="w-2 h-2 bg-green-100 rounded-full"></div>
+          </div>
+        )}
+        {isHost && !isOwner && !isSpeaker && (
           <div className="absolute -top-2 -right-2 bg-yellow-400 p-1 rounded-full">
             <FaCrown className="text-white text-xs" />
           </div>

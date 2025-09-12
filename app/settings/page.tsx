@@ -19,7 +19,18 @@ import {
 
 const SettingsPage = () => {
   // Get data and functions from the context
-  const { username, avatar, setUsername, setAvatar } = useUser();
+  const { 
+    username, 
+    avatar, 
+    nativeLanguage, 
+    targetLanguage, 
+    nationality,
+    setUsername, 
+    setAvatar,
+    setNativeLanguage,
+    setTargetLanguage,
+    setNationality
+  } = useUser();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isPasswordModalOpen, setPasswordModalOpen] = useState(false);
@@ -75,10 +86,65 @@ const SettingsPage = () => {
             <div className="space-y-4">
               <div>
                 <label className="block text-gray-700 font-medium">My Native Language</label>
-                <select className="w-full p-2 border rounded mt-1 text-gray-900">
-                  <option>English</option>
-                  <option>Arabic</option>
-                  <option>Spanish</option>
+                <select 
+                  className="w-full p-2 border rounded mt-1 text-gray-900"
+                  value={nativeLanguage}
+                  onChange={(e) => setNativeLanguage(e.target.value)}
+                >
+                  <option value="English">English</option>
+                  <option value="Arabic">Arabic (العربية)</option>
+                  <option value="Spanish">Spanish (Español)</option>
+                  <option value="French">French (Français)</option>
+                  <option value="German">German (Deutsch)</option>
+                  <option value="Chinese">Chinese (中文)</option>
+                  <option value="Japanese">Japanese (日本語)</option>
+                  <option value="Korean">Korean (한국어)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-gray-700 font-medium">Target Language</label>
+                <select 
+                  className="w-full p-2 border rounded mt-1 text-gray-900"
+                  value={targetLanguage}
+                  onChange={(e) => setTargetLanguage(e.target.value)}
+                >
+                  <option value="English">English</option>
+                  <option value="Arabic">Arabic (العربية)</option>
+                  <option value="Spanish">Spanish (Español)</option>
+                  <option value="French">French (Français)</option>
+                  <option value="German">German (Deutsch)</option>
+                  <option value="Chinese">Chinese (中文)</option>
+                  <option value="Japanese">Japanese (日本語)</option>
+                  <option value="Korean">Korean (한국어)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-gray-700 font-medium">Nationality</label>
+                <select 
+                  className="w-full p-2 border rounded mt-1 text-gray-900"
+                  value={nationality}
+                  onChange={(e) => setNationality(e.target.value)}
+                >
+                  <option value="US">🇺🇸 United States</option>
+                  <option value="GB">🇬🇧 United Kingdom</option>
+                  <option value="SA">🇸🇦 Saudi Arabia</option>
+                  <option value="AE">🇦🇪 United Arab Emirates</option>
+                  <option value="EG">🇪🇬 Egypt</option>
+                  <option value="ES">🇪🇸 Spain</option>
+                  <option value="MX">🇲🇽 Mexico</option>
+                  <option value="FR">🇫🇷 France</option>
+                  <option value="DE">🇩🇪 Germany</option>
+                  <option value="CN">🇨🇳 China</option>
+                  <option value="JP">🇯🇵 Japan</option>
+                  <option value="KR">🇰🇷 South Korea</option>
+                  <option value="IN">🇮🇳 India</option>
+                  <option value="BR">🇧🇷 Brazil</option>
+                  <option value="CA">🇨🇦 Canada</option>
+                  <option value="AU">🇦🇺 Australia</option>
+                  <option value="IT">🇮🇹 Italy</option>
+                  <option value="RU">🇷🇺 Russia</option>
+                  <option value="TR">🇹🇷 Turkey</option>
+                  <option value="NL">🇳🇱 Netherlands</option>
                 </select>
               </div>
               <div className="pt-2 space-y-3">
