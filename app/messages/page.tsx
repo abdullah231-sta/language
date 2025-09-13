@@ -67,17 +67,17 @@ const MessagesPage = () => {
     <>
       <div className="flex h-screen bg-white">
         {/* Left Pane */}
-        <div className="w-1/3 border-r flex flex-col">
+        <div className="w-full lg:w-1/3 border-r flex flex-col">
           <div className="p-4 border-b">
-            <h2 className="text-2xl font-bold">Messages</h2>
+            <h2 className="text-xl lg:text-2xl font-bold">Messages</h2>
             <div className="relative mt-4">
-              <input type="text" placeholder="Search messages..." className="w-full p-2 pl-10 border rounded-lg text-gray-900" />
+              <input type="text" placeholder="Search messages..." className="w-full p-3 pl-10 border rounded-lg text-gray-900 min-h-[44px] text-base" />
               <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             </div>
           </div>
           <div className="flex-1 overflow-y-auto p-2">
             {conversations.map((convo) => (
-              <div key={convo.id} onClick={() => setActiveConversationId(convo.id)}>
+              <div key={convo.id} onClick={() => setActiveConversationId(convo.id)} className="cursor-pointer">
                 <ConversationListItem 
                   name={convo.participantName}
                   lastMessage={convo.messages[convo.messages.length - 1]?.text || "No messages yet"}
@@ -91,7 +91,7 @@ const MessagesPage = () => {
 
         {/* Right Pane */}
         {activeConversation ? (
-          <div className="w-2/3 flex flex-col">
+          <div className="hidden lg:flex w-2/3 flex-col">
             <Link href={`/profile/${activeConversation.participantName.toLowerCase().replace(' ', '-')}`}>
               <div className="p-4 border-b flex items-center justify-between hover:bg-gray-50 cursor-pointer">
                 <div className="flex items-center">
@@ -106,7 +106,7 @@ const MessagesPage = () => {
                     e.preventDefault();
                     setDeleteModalOpen(true);
                   }} 
-                  className="p-2 text-gray-500 hover:text-red-500 rounded-full hover:bg-gray-100 z-10"
+                  className="p-3 text-gray-500 hover:text-red-500 rounded-full hover:bg-gray-100 z-10 min-w-[44px] min-h-[44px] flex items-center justify-center"
                 >
                   <FaTrash />
                 </button>
@@ -130,16 +130,16 @@ const MessagesPage = () => {
                 <input 
                   type="text" 
                   placeholder={`Message ${activeConversation.participantName}...`} 
-                  className="flex-1 p-3 border rounded-l-lg text-gray-900"
+                  className="flex-1 p-4 border rounded-l-lg text-gray-900 min-h-[48px] text-base"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                 />
-                <button type="submit" className="bg-blue-600 text-white p-4 rounded-r-lg hover:bg-blue-700"><FaPaperPlane /></button>
+                <button type="submit" className="bg-blue-600 text-white p-4 rounded-r-lg hover:bg-blue-700 min-w-[48px] min-h-[48px] flex items-center justify-center"><FaPaperPlane /></button>
               </div>
             </form>
           </div>
         ) : (
-          <div className="w-2/3 flex items-center justify-center bg-gray-50"><p className="text-gray-500">Select a conversation to start chatting</p></div>
+          <div className="hidden lg:flex w-2/3 items-center justify-center bg-gray-50"><p className="text-gray-500">Select a conversation to start chatting</p></div>
         )}
       </div>
       

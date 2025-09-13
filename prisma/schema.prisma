@@ -1,0 +1,105 @@
+// This is your Prisma schema file
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  username         String    @unique
+  avatarUrl        String?
+  nationality      String    @default("US")
+  nativeLanguage   String    @default("English")
+  targetLanguage   String    @default("Spanish")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relationships
+  ownedGroups      Group[]   @relation("GroupOwner")
+  groupMemberships GroupMember[]
+  sentMessages     Message[]
+  conversations    Conversation[]
+  
+  @@map("users")
+}
+
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  language    String
+  description String?
+  ownerId     String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  owner       User           @relation("GroupOwner", fields: [ownerId], references: [id])
+  members     GroupMember[]
+  messages    Message[]
+  
+  @@map("groups")
+}
+
+model GroupMember {
+  id         String   @id @default(cuid())
+  userId     String
+  groupId    String
+  role       MemberRole @default(LISTENER)
+  seatPosition Int?
+  isMuted    Boolean  @default(false)
+  isAdmin    Boolean  @default(false)
+  joinedAt   DateTime @default(now())
+
+  // Relationships
+  user       User     @relation(fields: [userId], references: [id])
+  group      Group    @relation(fields: [groupId], references: [id])
+
+  @@unique([userId, groupId])
+  @@map("group_members")
+}
+
+model Message {
+  id           String   @id @default(cuid())
+  content      String
+  senderId     String
+  groupId      String?
+  conversationId String?
+  createdAt    DateTime @default(now())
+
+  // Relationships
+  sender       User     @relation(fields: [senderId], references: [id])
+  group        Group?   @relation(fields: [groupId], references: [id])
+  conversation Conversation? @relation(fields: [conversationId], references: [id])
+
+  @@map("messages")
+}
+
+model Conversation {
+  id           String    @id @default(cuid())
+  userId       String
+  participantId String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relationships
+  user         User      @relation(fields: [userId], references: [id])
+  messages     Message[]
+
+  @@unique([userId, participantId])
+  @@map("conversations")
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  PARTICIPANT
+  LISTENER
+}

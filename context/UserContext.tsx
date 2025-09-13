@@ -2,7 +2,8 @@
 
 "use client";
 
-import { createContext, useState, useContext, ReactNode } from 'react';
+import { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import { useAuth } from './AuthContext';
 
 // Define the shape of the data in our context
 interface UserContextType {
@@ -23,11 +24,32 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 
 // Create a "Provider" component. This component will hold the actual state.
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [username, setUsername] = useState('User-1234');
+  const { user, isAuthenticated } = useAuth();
+  
+  // Default values for non-authenticated users
+  const [username, setUsername] = useState('Guest');
   const [avatar, setAvatar] = useState<string | null>('https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=500&auto=format&fit=crop');
   const [nativeLanguage, setNativeLanguage] = useState('English');
   const [targetLanguage, setTargetLanguage] = useState('Spanish');
   const [nationality, setNationality] = useState('US');
+
+  // Update user data when authentication state changes
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      setUsername(user.username);
+      setAvatar(user.avatar || null);
+      setNativeLanguage(user.nativeLanguage);
+      setTargetLanguage(user.targetLanguages[0] || 'Spanish'); // Use first target language
+      setNationality(user.nationality);
+    } else {
+      // Reset to default values when not authenticated
+      setUsername('Guest');
+      setAvatar('https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=500&auto=format&fit=crop');
+      setNativeLanguage('English');
+      setTargetLanguage('Spanish');
+      setNationality('US');
+    }
+  }, [isAuthenticated, user]);
 
   return (
     <UserContext.Provider value={{ 

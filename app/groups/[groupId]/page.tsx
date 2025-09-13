@@ -9,6 +9,7 @@ import { useUser } from '@/context/UserContext';
 import { useMessaging } from '@/context/MessagingContext';
 import InviteFriendsModal from '@/components/modals/InviteFriendsModal';
 import EngagementRequestModal from '@/components/modals/EngagementRequestModal';
+import GroupChat from '@/components/GroupChat';
 import { getFlagEmoji, getCountryName } from '@/utils/flags';
 
 // Enhanced group data structure with table seating where owner takes center position
@@ -141,6 +142,7 @@ const GroupPage = ({ params }: { params: { groupId: string } }) => {
   const [currentUserJoinRequest, setCurrentUserJoinRequest] = useState<number | null>(null);
   const [showOwnerLeaveModal, setShowOwnerLeaveModal] = useState(false);
   const [purpleCrownAdmins, setPurpleCrownAdmins] = useState<string[]>([]);
+  const [showChat, setShowChat] = useState(false);
   
   // Check if user is joining as listener
   useEffect(() => {
@@ -345,7 +347,19 @@ const GroupPage = ({ params }: { params: { groupId: string } }) => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-800 text-white font-sans">
+    <div className="flex flex-col h-screen bg-gray-800 text-white font-sans relative">
+      {/* Group Chat Panel */}
+      {showChat && (
+        <div className="fixed left-0 top-0 bottom-0 z-40 w-80 bg-gray-900 shadow-2xl transform transition-transform duration-300 ease-in-out border-r border-gray-600">
+          <GroupChat 
+            groupId={groupId} 
+            groupName={updatedGroupData.name}
+            isVisible={showChat}
+            onToggle={() => setShowChat(!showChat)}
+          />
+        </div>
+      )}
+
       {/* Join notification banner */}
       {showJoinBanner && (
         <div className="bg-green-600 text-white p-3 text-center font-medium">
@@ -365,6 +379,13 @@ const GroupPage = ({ params }: { params: { groupId: string } }) => {
                 <FaUserPlus className="text-xl" />
               </button>
             )}
+            <button 
+              onClick={() => setShowChat(!showChat)}
+              className="flex items-center text-green-400 hover:text-green-300 transition-colors"
+              title="Toggle Chat"
+            >
+              <FaComment className="text-xl" />
+            </button>
             <button 
               onClick={() => {
                 if (isOwner) {
@@ -388,7 +409,7 @@ const GroupPage = ({ params }: { params: { groupId: string } }) => {
         </div>
       </div>
 
-      <div className={`flex-grow p-6 overflow-y-auto transition-all duration-300 ${showMessagingPanel ? 'mr-80' : ''}`}>
+      <div className={`flex-grow p-6 overflow-y-auto transition-all duration-300 ${showChat ? 'ml-80' : ''} ${showMessagingPanel ? 'mr-80' : ''}`}>
         {/* User Sections - 10 sections arranged in grid */}
         <div className="mb-8">
           {/* User grid */}
