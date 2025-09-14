@@ -2,11 +2,38 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import bcrypt from 'bcryptjs'
 
-export async function POST(request: NextRequest) {
+interface LoginRequest {
+  emailOrUsername: string;
+  password: string;
+}
+
+interface LoginResponse {
+  success: boolean;
+  user?: {
+    id: string;
+    username: string;
+    email: string;
+    nationality?: string;
+    nativeLanguage?: string;
+    targetLanguage?: string;
+    createdAt?: string;
+  };
+  message?: string;
+  error?: string;
+  details?: string;
+}
+
+interface DatabaseUser {
+  id: string;
+  username: string;
+  email: string;
+  full_name: string;
+  avatarUrl?: string;
+}
+
+export async function POST(request: NextRequest): Promise<NextResponse<LoginResponse>> {
   try {
-    console.log('POST /api/auth/login called');
-    const body = await request.json()
-    console.log('Login request body:', { ...body, password: '[HIDDEN]' });
+    const body: LoginRequest = await request.json()
     
     const { emailOrUsername, password } = body
 
@@ -81,8 +108,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('Login successful for user:', user.username);
-    
     // Remove sensitive data before sending response
     const { avatarUrl, ...userResponse } = user;
 
@@ -93,7 +118,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Login error:', error);
     return NextResponse.json(
       { 
         success: false, 

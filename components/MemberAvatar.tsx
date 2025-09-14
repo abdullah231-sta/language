@@ -1,7 +1,8 @@
 // components/MemberAvatar.tsx
 
-import { FaCrown, FaPlus } from 'react-icons/fa';
+import { FaCrown, FaPlus, FaMicrophone } from 'react-icons/fa';
 import { getFlagEmoji } from '@/utils/flags';
+import { useVoice } from '@/context/VoiceContext';
 
 interface MemberAvatarProps {
   name: string;
@@ -12,9 +13,20 @@ interface MemberAvatarProps {
   isSpeaker?: boolean;
   isPurpleCrownAdmin?: boolean;
   nationality?: string;
+  userId?: string;
 }
 
-const MemberAvatar = ({ name, avatarUrl, isHost = false, isInvite = false, isOwner = false, isSpeaker = false, isPurpleCrownAdmin = false, nationality }: MemberAvatarProps) => {
+const MemberAvatar = ({ name, avatarUrl, isHost = false, isInvite = false, isOwner = false, isSpeaker = false, isPurpleCrownAdmin = false, nationality, userId }: MemberAvatarProps) => {
+  const { voiceState } = useVoice();
+  const isSpeaking = userId && voiceState.speakingUsers.has(userId);
+  
+  // Debug logging
+  console.log('MemberAvatar:', { 
+    name, 
+    userId, 
+    speakingUsers: Array.from(voiceState.speakingUsers), 
+    isSpeaking 
+  });
   // If this is the "Invite" button
   if (isInvite) {
     return (
@@ -31,10 +43,20 @@ const MemberAvatar = ({ name, avatarUrl, isHost = false, isInvite = false, isOwn
   return (
     <div className="flex flex-col items-center text-center">
       <div className="relative w-20 h-20 mb-2">
-        <img src={avatarUrl} alt={name} className="w-full h-full rounded-full object-cover border-2 border-gray-600" />
+        <img src={avatarUrl} alt={name} className={`w-full h-full rounded-full object-cover border-2 transition-all duration-300 ${
+          isSpeaking 
+            ? 'border-green-400 shadow-lg shadow-green-400/30' 
+            : 'border-gray-600'
+        }`} />
         {nationality && (
           <div className="absolute -bottom-1 -right-1 text-lg">
             {getFlagEmoji(nationality)}
+          </div>
+        )}
+        {/* Voice Activity Indicator */}
+        {isSpeaking && (
+          <div className="absolute -top-2 -left-2 bg-green-500 p-1.5 rounded-full border-2 border-green-300 shadow-lg animate-pulse">
+            <FaMicrophone className="text-green-100 text-xs" />
           </div>
         )}
         {isOwner && (

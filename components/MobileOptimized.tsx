@@ -80,31 +80,34 @@ export const MobileButton: React.FC<MobileButtonProps> = ({
   type = 'button',
 }) => {
   const { theme } = useTheme();
+  const isTouchDevice = useIsTouchDevice();
 
   const baseClasses = `
     font-semibold rounded-lg transition-all duration-200 
     touch-manipulation active:scale-95 
     focus:outline-none focus:ring-2 focus:ring-offset-2
+    flex items-center justify-center
     ${fullWidth ? 'w-full' : ''}
-    ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+    ${disabled ? 'opacity-50 cursor-not-allowed transform-none' : 'cursor-pointer hover:scale-105'}
+    ${isTouchDevice ? 'active:bg-opacity-80' : ''}
   `;
 
   const sizeClasses = {
-    sm: 'px-3 py-2 text-sm min-h-[44px]',
-    md: 'px-4 py-3 text-base min-h-[48px]',
-    lg: 'px-6 py-4 text-lg min-h-[52px]',
+    sm: 'px-4 py-3 text-sm min-h-[44px] min-w-[44px]',
+    md: 'px-5 py-4 text-base min-h-[48px] min-w-[48px]',
+    lg: 'px-6 py-5 text-lg min-h-[52px] min-w-[52px]',
   };
 
   const variantClasses = {
     primary: theme === 'dark' 
-      ? 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500'
-      : 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500',
+      ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white focus:ring-blue-500 shadow-lg hover:shadow-xl'
+      : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white focus:ring-blue-500 shadow-lg hover:shadow-xl',
     secondary: theme === 'dark'
-      ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 focus:ring-gray-500'
-      : 'bg-gray-200 hover:bg-gray-300 text-gray-800 focus:ring-gray-500',
+      ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 border border-gray-600 focus:ring-gray-500 shadow-md hover:shadow-lg'
+      : 'bg-gray-200 hover:bg-gray-300 text-gray-800 border border-gray-300 focus:ring-gray-400 shadow-md hover:shadow-lg',
     danger: theme === 'dark'
-      ? 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500'
-      : 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500',
+      ? 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500 shadow-lg hover:shadow-xl'
+      : 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500 shadow-lg hover:shadow-xl',
   };
 
   return (

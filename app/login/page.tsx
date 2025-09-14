@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 import { MobileInput, MobileButton } from '@/components/MobileOptimized';
 
 export default function LoginPage() {
@@ -12,9 +13,9 @@ export default function LoginPage() {
     password: ''
   });
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const router = useRouter();
   const { login, isLoading } = useAuth();
+  const { showSuccess, showError } = useToast();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -28,17 +29,25 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setSuccess('');
+
+    if (!formData.email || !formData.password) {
+      const errorMsg = 'Please fill in all fields';
+      setError(errorMsg);
+      showError(errorMsg);
+      return;
+    }
 
     const result = await login(formData.email, formData.password);
 
     if (result.success) {
-      setSuccess('Login successful! Redirecting...');
+      showSuccess('Login successful! Redirecting...');
       setTimeout(() => {
         router.push('/');
-      }, 1500);
+      }, 1000);
     } else {
-      setError(result.error || 'Login failed. Please try again.');
+      const errorMsg = result.error || 'Login failed. Please try again.';
+      setError(errorMsg);
+      showError(errorMsg);
     }
   };
 
@@ -66,10 +75,9 @@ export default function LoginPage() {
             <MobileInput
               type="email"
               value={formData.email}
-              onChange={(value) => setFormData({...formData, email: value})}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
               className="w-full px-4 py-4 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               placeholder="Enter your email"
-              required
             />
           </div>
           
@@ -80,10 +88,9 @@ export default function LoginPage() {
             <MobileInput
               type="password"
               value={formData.password}
-              onChange={(value) => setFormData({...formData, password: value})}
+              onChange={(e) => setFormData({...formData, password: e.target.value})}
               className="w-full px-4 py-4 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               placeholder="Enter your password"
-              required
             />
           </div>
 
@@ -92,14 +99,6 @@ export default function LoginPage() {
             <div className="bg-red-900/30 border border-red-700 text-red-300 px-4 py-3 rounded-lg flex items-center space-x-2">
               <span className="text-lg">❌</span>
               <span>{error}</span>
-            </div>
-          )}
-
-          {/* Success Message */}
-          {success && (
-            <div className="bg-green-900/30 border border-green-700 text-green-300 px-4 py-3 rounded-lg flex items-center space-x-2">
-              <span className="text-lg">✅</span>
-              <span>{success}</span>
             </div>
           )}
 

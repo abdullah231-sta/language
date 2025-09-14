@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FaArrowLeft } from 'react-icons/fa';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 
 interface CreateGroupForm {
   name: string;
@@ -12,6 +14,8 @@ interface CreateGroupForm {
 
 const CreateGroupPage = () => {
   const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<CreateGroupForm>({
     name: '',
@@ -38,39 +42,49 @@ const CreateGroupPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!isAuthenticated || !user) {
+      showToast('Please log in to create a group', 'error');
+      router.push('/login');
+      return;
+    }
+
+    if (!formData.name.trim() || !formData.language.trim()) {
+      showToast('Please fill in all required fields', 'error');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Create new group object
-      const newGroup = {
-        id: Date.now(), // Simple ID generation
-        name: formData.name,
+      const groupData = {
+        name: formData.name.trim(),
         language: formData.language,
-        targetLanguage: formData.language,
-        memberCount: 1, // Creator is the first member
-        activeNow: 1, // Creator is active
         description: `A new ${formData.level.toLowerCase()} level ${formData.language} conversation group.`,
-        level: formData.level,
-        category: 'Conversation',
-        owner: { name: 'You', nationality: 'US' }, // You can update this based on actual user data
-        lastActive: 'Just created'
+        ownerId: user.id
       };
-
-      // Store in localStorage so it persists and shows up on the groups page
-      const existingGroups = JSON.parse(localStorage.getItem('userCreatedGroups') || '[]');
-      existingGroups.push(newGroup);
-      localStorage.setItem('userCreatedGroups', JSON.stringify(existingGroups));
-
-      console.log('Creating group with data:', formData);
-      console.log('New group created:', newGroup);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await fetch('/api/groups', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(groupData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create group');
+      }
+
+      showToast('Group created successfully!', 'success');
       
-      // Redirect to the actual group conversation page we edited before
-      router.push(`/groups/${newGroup.id}`);
+      // Redirect to the specific group conversation page
+      router.push(`/groups/${data.group.id}`);
     } catch (error) {
       console.error('Error creating group:', error);
+      showToast(error instanceof Error ? error.message : 'Failed to create group', 'error');
     } finally {
       setLoading(false);
     }

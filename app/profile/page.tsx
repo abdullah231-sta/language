@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { FaEdit, FaSave, FaTimes, FaGlobe, FaGraduationCap, FaUser, FaEnvelope, FaCalendarAlt, FaCamera } from 'react-icons/fa';
 import Link from 'next/link';
+import ConversationStats from '@/components/ConversationStats';
 
 export default function ProfilePage() {
   const { user, updateProfile, isLoading } = useAuth();
@@ -657,6 +658,11 @@ export default function ProfilePage() {
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Conversation Stats */}
+                <div className="mt-8">
+                  <ConversationStats compact={true} showModal={true} />
                 </div>
               </div>
             ) : (

@@ -4,6 +4,7 @@
 
 import { useRef, ChangeEvent, useState } from 'react';
 import { useUser } from '@/context/UserContext';
+import { useToast } from '@/context/ToastContext';
 import PasswordModal from '@/components/modals/PasswordModal';
 import DeleteModal from '@/components/modals/DeleteModal';
 import { 
@@ -32,19 +33,63 @@ const SettingsPage = () => {
     setNationality
   } = useUser();
   
+  const { showSuccess, showError, showInfo } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isPasswordModalOpen, setPasswordModalOpen] = useState(false);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        showError('Please select a valid image file');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        showError('Image file size must be less than 5MB');
+        return;
+      }
+      
       setAvatar(URL.createObjectURL(file));
+      showSuccess('Profile picture updated!');
     }
   };
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
+  };
+  
+  const handleSaveChanges = async () => {
+    setIsSaving(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      showSuccess('Settings saved successfully!');
+    } catch (error) {
+      showError('Failed to save settings. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      showInfo('Logging out...');
+      // Simulate logout delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Add actual logout logic here
+      showSuccess('Logged out successfully!');
+    } catch (error) {
+      showError('Failed to logout. Please try again.');
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
   
   return (
@@ -191,18 +236,50 @@ const SettingsPage = () => {
           <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-lg shadow-md">
             <h2 className="text-xl font-semibold mb-4 flex items-center text-red-700"><FaExclamationTriangle className="mr-3" /> Danger Zone</h2>
             <p className="text-red-600 mb-4">These actions are permanent and cannot be undone.</p>
-            <button onClick={() => setDeleteModalOpen(true)} className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition">
-              Delete My Account
+            <button 
+              onClick={() => setDeleteModalOpen(true)} 
+              className="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-red-50"
+            >
+              <FaExclamationTriangle className="mr-2" />
+              <span>Delete My Account</span>
             </button>
           </div>
           
           {/* === 5. ACTION BUTTONS (RESTORED) === */}
           <div className="flex flex-col sm:flex-row items-center gap-4 pt-4 border-t mt-8">
-            <button className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition flex items-center justify-center">
-              <FaSave className="mr-2" /> Save Changes
+            <button 
+              onClick={handleSaveChanges}
+              disabled={isSaving}
+              className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none min-w-[140px]"
+            >
+              {isSaving ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <FaSave className="mr-2" /> 
+                  <span>Save Changes</span>
+                </>
+              )}
             </button>
-            <button className="w-full sm:w-auto px-6 py-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition flex items-center justify-center">
-              <FaSignOutAlt className="mr-2" /> Logout
+            <button 
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="w-full sm:w-auto px-6 py-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none min-w-[120px]"
+            >
+              {isLoggingOut ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  <span>Logging out...</span>
+                </>
+              ) : (
+                <>
+                  <FaSignOutAlt className="mr-2" /> 
+                  <span>Logout</span>
+                </>
+              )}
             </button>
           </div>
         </div>

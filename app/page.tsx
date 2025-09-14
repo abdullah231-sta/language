@@ -10,30 +10,30 @@ const HomePage = () => {
   if (!isAuthenticated || !user) {
     // Welcome page for non-logged in users
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-gray-900 to-purple-900">
+      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-gray-900 to-purple-900 overflow-hidden">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
           {/* Hero Section */}
-          <div className="text-center mb-12 lg:mb-16">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 sm:mb-6">
+          <div className="text-center mb-12 lg:mb-16 animate-fade-in">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 sm:mb-6 animate-slide-in-left">
               Welcome to{' '}
-              <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent animate-pulse-slow">
                 LinguaConnect
               </span>
             </h1>
-            <p className="text-lg sm:text-xl text-gray-300 mb-6 sm:mb-8 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-lg sm:text-xl text-gray-300 mb-6 sm:mb-8 max-w-3xl mx-auto leading-relaxed animate-slide-in-right" style={{animationDelay: '0.2s'}}>
               Connect with language learners worldwide. Practice conversations, join study groups, 
               and accelerate your language learning journey with our global community.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center max-w-md sm:max-w-none mx-auto">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center max-w-md sm:max-w-none mx-auto animate-fade-in" style={{animationDelay: '0.4s'}}>
               <Link
                 href="/register"
-                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold text-base sm:text-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 transform hover:scale-105 min-h-[48px] flex items-center justify-center"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold text-base sm:text-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 transform hover:scale-105 hover:shadow-xl min-h-[48px] flex items-center justify-center hover-glow"
               >
                 Get Started Free
               </Link>
               <Link
                 href="/login"
-                className="border-2 border-white text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold text-base sm:text-lg hover:bg-white hover:text-gray-900 transition-all duration-200 min-h-[48px] flex items-center justify-center"
+                className="border-2 border-white text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold text-base sm:text-lg hover:bg-white hover:text-gray-900 transition-all duration-200 hover:scale-105 hover:shadow-xl min-h-[48px] flex items-center justify-center"
               >
                 Sign In
               </Link>
@@ -41,9 +41,10 @@ const HomePage = () => {
           </div>
 
           {/* Features */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 mb-12 lg:mb-16">
-            <div className="bg-gray-800/50 backdrop-blur-sm p-6 sm:p-8 rounded-xl border border-gray-700 text-center">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 mb-12 lg:mb-16 stagger-children"
+               style={{animationDelay: '0.6s'}}>
+            <div className="bg-gray-800/50 backdrop-blur-sm p-6 sm:p-8 rounded-xl border border-gray-700 text-center hover-lift hover-glow transition-all duration-300">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 hover:scale-110 transition-transform duration-200">
                 <FaUsers className="text-xl sm:text-2xl text-white" />
               </div>
               <h3 className="text-lg sm:text-xl font-semibold text-white mb-3 sm:mb-4">Join Groups</h3>

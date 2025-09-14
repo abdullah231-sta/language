@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Language App - Offline</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .offline-container {
+            max-width: 400px;
+            width: 100%;
+        }
+        
+        .offline-icon {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+            opacity: 0.7;
+        }
+        
+        .offline-title {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: #f3f4f6;
+        }
+        
+        .offline-description {
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            color: #9ca3af;
+            line-height: 1.6;
+        }
+        
+        .offline-features {
+            background: rgba(55, 65, 81, 0.5);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(75, 85, 99, 0.3);
+        }
+        
+        .offline-features h3 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: #60a5fa;
+        }
+        
+        .offline-features ul {
+            list-style: none;
+            text-align: left;
+        }
+        
+        .offline-features li {
+            padding: 0.5rem 0;
+            color: #d1d5db;
+            display: flex;
+            align-items: center;
+        }
+        
+        .offline-features li::before {
+            content: "✓";
+            color: #10b981;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+        
+        .retry-button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .retry-button:hover {
+            background: #2563eb;
+        }
+        
+        .retry-button:active {
+            transform: translateY(1px);
+        }
+        
+        .connection-status {
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">🌐</div>
+        <h1 class="offline-title">You're Offline</h1>
+        <p class="offline-description">
+            No internet connection detected. Don't worry, you can still access some features!
+        </p>
+        
+        <div class="offline-features">
+            <h3>Available Offline:</h3>
+            <ul>
+                <li>View recent conversations</li>
+                <li>Access cached group information</li>
+                <li>Browse saved learning materials</li>
+                <li>Review offline vocabulary</li>
+            </ul>
+        </div>
+        
+        <button class="retry-button" onclick="checkConnection()">
+            Check Connection
+        </button>
+        
+        <div class="connection-status pulse">
+            Offline Mode - Limited functionality
+        </div>
+    </div>
+
+    <script>
+        function checkConnection() {
+            if (navigator.onLine) {
+                // Try to reload the page
+                window.location.reload();
+            } else {
+                // Update status
+                const status = document.querySelector('.connection-status');
+                status.textContent = 'Still offline - Please check your connection';
+                status.style.background = 'rgba(239, 68, 68, 0.2)';
+                
+                // Reset after 3 seconds
+                setTimeout(() => {
+                    status.textContent = 'Offline Mode - Limited functionality';
+                    status.style.background = 'rgba(239, 68, 68, 0.1)';
+                }, 3000);
+            }
+        }
+        
+        // Listen for connection changes
+        window.addEventListener('online', () => {
+            const status = document.querySelector('.connection-status');
+            status.textContent = 'Connection restored! Reloading...';
+            status.style.background = 'rgba(16, 185, 129, 0.2)';
+            status.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+            status.style.color = '#6ee7b7';
+            status.classList.remove('pulse');
+            
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        });
+        
+        window.addEventListener('offline', () => {
+            const status = document.querySelector('.connection-status');
+            status.textContent = 'Connection lost - Offline mode active';
+            status.style.background = 'rgba(239, 68, 68, 0.1)';
+            status.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+            status.style.color = '#fca5a5';
+            status.classList.add('pulse');
+        });
+        
+        // Check connection status on load
+        if (!navigator.onLine) {
+            document.querySelector('.connection-status').classList.add('pulse');
+        }
+    </script>
+</body>
+</html>

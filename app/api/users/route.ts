@@ -6,6 +6,21 @@ import bcrypt from 'bcryptjs'
 // Email validation regex
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+interface CreateUserRequest {
+  email: string;
+  username: string;
+  full_name: string;
+  password: string;
+}
+
+interface UserResponse {
+  id: string;
+  username: string;
+  email: string;
+  full_name: string;
+  created_at: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Test database connection using Supabase
@@ -19,7 +34,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Let's also check the table structure
-    console.log('Sample user data structure:', users?.[0] || 'No users found');
+    const sampleUser = users?.[0] || null;
 
     return NextResponse.json({
       success: true,
@@ -43,15 +58,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('POST /api/users called');
-    const body = await request.json()
-    console.log('Request body:', body);
+    const body: CreateUserRequest = await request.json()
     
     const { email, username, full_name, password } = body
 
     // Validate required fields
     if (!email || !username || !password) {
-      console.log('Missing required fields');
       return NextResponse.json(
         { 
           success: false,
@@ -63,7 +75,6 @@ export async function POST(request: NextRequest) {
 
     // Validate email format
     if (!emailRegex.test(email)) {
-      console.log('Invalid email format:', email);
       return NextResponse.json(
         { 
           success: false,
@@ -75,7 +86,6 @@ export async function POST(request: NextRequest) {
 
     // Validate password length
     if (password.length < 6) {
-      console.log('Password too short');
       return NextResponse.json(
         { 
           success: false,
@@ -85,7 +95,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('Checking for existing user...');
     // Check if user already exists
     const { data: existingUser, error: checkError } = await supabase
       .from('users')
@@ -98,7 +107,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (existingUser) {
-      console.log('User already exists:', existingUser);
       return NextResponse.json(
         { 
           success: false,
@@ -108,11 +116,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('Creating user with existing schema...');
-
-    // Create a new user using Supabase with existing columns
-    // We'll store a hash of the password in the avatarUrl field temporarily
-    // This is not ideal but works with the current schema
+    // Hash password
     const saltRounds = 12;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
@@ -134,7 +138,6 @@ export async function POST(request: NextRequest) {
       throw error
     }
 
-    console.log('User created successfully:', user);
     return NextResponse.json({
       success: true,
       user: user,

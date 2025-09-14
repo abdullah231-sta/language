@@ -1,32 +1,35 @@
-"use client";
+﻿"use client";
 
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import { useUser } from './UserContext';
 import { useNotifications } from './NotificationContext';
 
-interface Message {
+// Define interfaces for the chat context
+interface ChatMessage {
   id: string;
   content: string;
   senderId: string;
   senderName: string;
   senderAvatar: string;
   groupId: string;
-  timestamp: Date;
+  timestamp: number;
   type: 'text' | 'image' | 'file' | 'system';
   reactions?: { [emoji: string]: string[] };
   replyTo?: {
-    messageId: string;
+    id: string;
     content: string;
     senderName: string;
   };
 }
 
 interface OnlineUser {
-  id: string;
-  name: string;
-  avatar: string;
-  status: 'online' | 'away' | 'busy';
-  lastSeen: Date;
+  userId: string;
+  username: string;
+}
+
+interface TypingUser {
+  userId: string;
+  username: string;
 }
 
 interface RealTimeChatContextType {
@@ -35,8 +38,8 @@ interface RealTimeChatContextType {
   connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
   
   // Messages
-  messages: { [groupId: string]: Message[] };
-  sendMessage: (groupId: string, content: string, type?: 'text' | 'image' | 'file', replyTo?: Message['replyTo']) => void;
+  messages: { [groupId: string]: ChatMessage[] };
+  sendMessage: (groupId: string, content: string, type?: 'text' | 'image' | 'file', replyTo?: ChatMessage['replyTo']) => void;
   addReaction: (groupId: string, messageId: string, emoji: string) => void;
   removeReaction: (groupId: string, messageId: string, emoji: string) => void;
   
@@ -46,194 +49,277 @@ interface RealTimeChatContextType {
   leaveGroup: (groupId: string) => void;
   
   // Typing indicators
-  typingUsers: { [groupId: string]: string[] };
+  typingUsers: { [groupId: string]: TypingUser[] };
   startTyping: (groupId: string) => void;
   stopTyping: (groupId: string) => void;
   
   // Voice activity (for future voice chat features)
   voiceActivity: { [groupId: string]: { [userId: string]: boolean } };
+
+  // Simulate receiving messages (for testing)
+  simulateReceivedMessage: (groupId: string, content: string, senderName: string) => void;
 }
 
 const RealTimeChatContext = createContext<RealTimeChatContextType | null>(null);
 
-interface RealTimeChatProviderProps {
-  children: React.ReactNode;
-}
-
-export const RealTimeChatProvider: React.FC<RealTimeChatProviderProps> = ({ children }) => {
+export const RealTimeChatProvider = ({ children }: { children: ReactNode }) => {
   const { username, avatar } = useUser();
   const { addNotification } = useNotifications();
-  
-  // WebSocket connection
-  const ws = useRef<WebSocket | null>(null);
-  const reconnectTimeout = useRef<NodeJS.Timeout | null>(null);
-  const typingTimeout = useRef<{ [groupId: string]: NodeJS.Timeout }>({});
+  const typingTimeouts = useRef<{ [groupId: string]: NodeJS.Timeout }>({});
+  const [currentActiveTab, setCurrentActiveTab] = useState(true);
   
   // State
   const [isConnected, setIsConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
-  const [messages, setMessages] = useState<{ [groupId: string]: Message[] }>({});
+  const [messages, setMessages] = useState<{ [groupId: string]: ChatMessage[] }>({});
   const [onlineUsers, setOnlineUsers] = useState<{ [groupId: string]: OnlineUser[] }>({});
-  const [typingUsers, setTypingUsers] = useState<{ [groupId: string]: string[] }>({});
+  const [typingUsers, setTypingUsers] = useState<{ [groupId: string]: TypingUser[] }>({});
   const [voiceActivity, setVoiceActivity] = useState<{ [groupId: string]: { [userId: string]: boolean } }>({});
   const [joinedGroups, setJoinedGroups] = useState<Set<string>>(new Set());
 
-  // Initialize sample data
+  // Initialize with sample data for demo and load from API
   useEffect(() => {
-    // Initialize with sample messages for demonstration
-    const sampleMessages: { [groupId: string]: Message[] } = {
-      '1': [
-        {
-          id: 'system-1',
-          content: 'Welcome to the English Learners group! 🎉',
-          senderId: 'system',
-          senderName: 'System',
-          senderAvatar: '',
-          groupId: '1',
-          timestamp: new Date(Date.now() - 1000 * 60 * 30),
-          type: 'system'
-        },
-        {
-          id: 'msg-1',
-          content: 'Hi everyone! Excited to practice English here 😊',
-          senderId: 'user-2',
-          senderName: 'Sarah',
-          senderAvatar: 'https://images.unsplash.com/photo-1494790108755-2616c64c4caf?w=500&auto=format&fit=crop',
-          groupId: '1',
-          timestamp: new Date(Date.now() - 1000 * 60 * 25),
-          type: 'text',
-          reactions: { '👍': ['user-3', 'user-4'], '❤️': ['user-3'] }
+    const loadMessagesForGroup = async (groupId: string) => {
+      try {
+        const response = await fetch(`/api/messages?groupId=${groupId}&limit=100`);
+        const data = await response.json();
+        
+        if (data.success && data.messages) {
+          const apiMessages: ChatMessage[] = data.messages.map((msg: any) => ({
+            id: msg.id,
+            content: msg.content,
+            senderId: msg.senderId,
+            senderName: msg.users?.username || 'Unknown User',
+            senderAvatar: '',
+            groupId: msg.groupId,
+            timestamp: new Date(msg.createdAt).getTime(),
+            type: 'text' as const,
+            reactions: {},
+            replyTo: undefined
+          }));
+
+          setMessages(prev => ({
+            ...prev,
+            [groupId]: apiMessages
+          }));
         }
-      ]
+      } catch (error) {
+        console.error('Failed to load messages for group', groupId, error);
+      }
     };
+
+    // Load messages for joined groups
+    if (joinedGroups.size > 0) {
+      joinedGroups.forEach(groupId => {
+        loadMessagesForGroup(groupId);
+      });
+    } else {
+      // Initialize with sample data for demo when no groups joined
+      const sampleMessages: { [groupId: string]: ChatMessage[] } = {
+        '1': [
+          {
+            id: 'system-1',
+            content: 'Welcome to the English Learners group! 🎉',
+            senderId: 'system',
+            senderName: 'System',
+            senderAvatar: '',
+            groupId: '1',
+            timestamp: Date.now() - 1000 * 60 * 30,
+            type: 'system'
+          },
+          {
+            id: 'msg-1',
+            content: 'Hi everyone! Excited to practice English here 😊',
+            senderId: 'user-2',
+            senderName: 'Sarah',
+            senderAvatar: 'https://images.unsplash.com/photo-1494790108755-2616c64c4caf?w=500&auto=format&fit=crop',
+            groupId: '1',
+            timestamp: Date.now() - 1000 * 60 * 25,
+            type: 'text',
+            reactions: { '👍': ['user-3', 'user-4'], '❤️': ['user-3'] }
+          }
+        ]
+      };
+
+      setMessages(sampleMessages);
+    }
 
     const sampleOnlineUsers: { [groupId: string]: OnlineUser[] } = {
       '1': [
-        {
-          id: 'user-2',
-          name: 'Sarah',
-          avatar: 'https://images.unsplash.com/photo-1494790108755-2616c64c4caf?w=500&auto=format&fit=crop',
-          status: 'online',
-          lastSeen: new Date()
-        },
-        {
-          id: 'user-3',
-          name: 'Marco',
-          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop',
-          status: 'online',
-          lastSeen: new Date()
-        }
+        { userId: 'user-2', username: 'Sarah' },
+        { userId: 'user-3', username: 'John' },
+        { userId: 'user-4', username: 'Maria' }
       ]
     };
 
-    setMessages(sampleMessages);
     setOnlineUsers(sampleOnlineUsers);
-  }, []);
-
-  // Simulate WebSocket connection (in a real app, this would connect to an actual WebSocket server)
-  const connectWebSocket = () => {
-    if (!username) return;
-
-    setConnectionStatus('connecting');
-
-    // Simulate connection delay
+    
+    // Simulate connection
     setTimeout(() => {
       setIsConnected(true);
       setConnectionStatus('connected');
-      
-      // Add current user to online users for joined groups
-      joinedGroups.forEach(groupId => {
-        setOnlineUsers(prev => ({
-          ...prev,
-          [groupId]: [
-            ...(prev[groupId] || []).filter(user => user.id !== username),
-            {
-              id: username,
-              name: username,
-              avatar: avatar || '',
-              status: 'online',
-              lastSeen: new Date()
-            }
-          ]
-        }));
-      });
     }, 1000);
-  };
+  }, [joinedGroups]);
 
-  // Disconnect WebSocket
-  const disconnectWebSocket = () => {
-    if (ws.current) {
-      ws.current.close();
-      ws.current = null;
-    }
-    setIsConnected(false);
-    setConnectionStatus('disconnected');
-  };
-
-  // Connect on mount if user is logged in
+  // Track tab visibility for notifications
   useEffect(() => {
-    if (username) {
-      connectWebSocket();
-    }
+    const handleVisibilityChange = () => {
+      setCurrentActiveTab(!document.hidden);
+    };
+
+    const handleFocus = () => setCurrentActiveTab(true);
+    const handleBlur = () => setCurrentActiveTab(false);
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
 
     return () => {
-      disconnectWebSocket();
-      if (reconnectTimeout.current) {
-        clearTimeout(reconnectTimeout.current);
-      }
-      Object.values(typingTimeout.current).forEach(timeout => clearTimeout(timeout));
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
     };
-  }, [username]);
+  }, []);
 
-  // Send message
-  const sendMessage = (groupId: string, content: string, type: 'text' | 'image' | 'file' = 'text', replyTo?: Message['replyTo']) => {
-    if (!isConnected || !username) return;
+  // Method implementations
+  const joinGroup = useCallback((groupId: string) => {
+    setJoinedGroups(prev => new Set([...prev, groupId]));
+  }, []);
 
-    const message: Message = {
-      id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+  const leaveGroup = useCallback((groupId: string) => {
+    setJoinedGroups(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(groupId);
+      return newSet;
+    });
+  }, []);
+
+  const sendMessage = useCallback(async (groupId: string, content: string, type: 'text' | 'image' | 'file' = 'text', replyTo?: ChatMessage['replyTo']) => {
+    if (!username) return;
+    
+    const tempId = `msg-${Date.now()}`;
+    const newMessage: ChatMessage = {
+      id: tempId,
       content,
       senderId: username,
       senderName: username,
       senderAvatar: avatar || '',
       groupId,
-      timestamp: new Date(),
+      timestamp: Date.now(),
       type,
-      reactions: {},
-      ...(replyTo && { replyTo })
+      replyTo
     };
-
-    // Add message to local state immediately (optimistic update)
+    
+    // Optimistically add message to local state
     setMessages(prev => ({
       ...prev,
-      [groupId]: [...(prev[groupId] || []), message]
+      [groupId]: [...(prev[groupId] || []), newMessage]
     }));
 
-    // Simulate server broadcast to other users
-    setTimeout(() => {
-      // Simulate receiving reactions from other users occasionally
-      if (Math.random() > 0.7) {
-        setTimeout(() => {
-          addReaction(groupId, message.id, ['👍', '❤️', '😊'][Math.floor(Math.random() * 3)]);
-        }, 2000);
+    try {
+      // Persist message to database
+      const response = await fetch('/api/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content,
+          senderId: username, // This would be user ID in real app
+          groupId,
+          type
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success && data.message) {
+        // Update the message with the real ID from database
+        setMessages(prev => ({
+          ...prev,
+          [groupId]: prev[groupId].map(msg => 
+            msg.id === tempId 
+              ? { ...msg, id: data.message.id, timestamp: new Date(data.message.createdAt).getTime() }
+              : msg
+          )
+        }));
+      } else {
+        // Remove the optimistic message on failure
+        setMessages(prev => ({
+          ...prev,
+          [groupId]: prev[groupId].filter(msg => msg.id !== tempId)
+        }));
+        console.error('Failed to save message:', data.error);
       }
-    }, 500);
+    } catch (error) {
+      // Remove the optimistic message on error
+      setMessages(prev => ({
+        ...prev,
+        [groupId]: prev[groupId].filter(msg => msg.id !== tempId)
+      }));
+      console.error('Error saving message:', error);
+    }
 
-    // Stop typing indicator
-    stopTyping(groupId);
-  };
+    // Trigger notification for new message (simulate for other users)
+    if (!currentActiveTab) {
+      addNotification({
+        type: 'message',
+        title: `New message in group chat`,
+        message: `${username}: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`,
+        groupId,
+        userId: username
+      });
+    }
+  }, [username, avatar, currentActiveTab, addNotification]);
 
-  // Add reaction
-  const addReaction = (groupId: string, messageId: string, emoji: string) => {
+  const startTyping = useCallback((groupId: string) => {
     if (!username) return;
+    
+    setTypingUsers(prev => {
+      const currentTyping = prev[groupId] || [];
+      const userAlreadyTyping = currentTyping.some(u => u.userId === username);
+      
+      if (!userAlreadyTyping) {
+        return {
+          ...prev,
+          [groupId]: [...currentTyping, { userId: username, username }]
+        };
+      }
+      return prev;
+    });
+    
+    if (typingTimeouts.current[groupId]) {
+      clearTimeout(typingTimeouts.current[groupId]);
+    }
+    
+    typingTimeouts.current[groupId] = setTimeout(() => {
+      stopTyping(groupId);
+    }, 3000);
+  }, [username]);
 
+  const stopTyping = useCallback((groupId: string) => {
+    if (!username) return;
+    
+    setTypingUsers(prev => ({
+      ...prev,
+      [groupId]: (prev[groupId] || []).filter(u => u.userId !== username)
+    }));
+    
+    if (typingTimeouts.current[groupId]) {
+      clearTimeout(typingTimeouts.current[groupId]);
+      delete typingTimeouts.current[groupId];
+    }
+  }, [username]);
+
+  const addReaction = useCallback((groupId: string, messageId: string, emoji: string) => {
+    if (!username) return;
+    
     setMessages(prev => ({
       ...prev,
       [groupId]: (prev[groupId] || []).map(msg => {
         if (msg.id === messageId) {
           const reactions = { ...msg.reactions };
-          if (!reactions[emoji]) {
-            reactions[emoji] = [];
-          }
+          if (!reactions[emoji]) reactions[emoji] = [];
           if (!reactions[emoji].includes(username)) {
             reactions[emoji].push(username);
           }
@@ -242,19 +328,18 @@ export const RealTimeChatProvider: React.FC<RealTimeChatProviderProps> = ({ chil
         return msg;
       })
     }));
-  };
+  }, [username]);
 
-  // Remove reaction
-  const removeReaction = (groupId: string, messageId: string, emoji: string) => {
+  const removeReaction = useCallback((groupId: string, messageId: string, emoji: string) => {
     if (!username) return;
-
+    
     setMessages(prev => ({
       ...prev,
       [groupId]: (prev[groupId] || []).map(msg => {
         if (msg.id === messageId) {
           const reactions = { ...msg.reactions };
           if (reactions[emoji]) {
-            reactions[emoji] = reactions[emoji].filter(userId => userId !== username);
+            reactions[emoji] = reactions[emoji].filter(id => id !== username);
             if (reactions[emoji].length === 0) {
               delete reactions[emoji];
             }
@@ -264,109 +349,37 @@ export const RealTimeChatProvider: React.FC<RealTimeChatProviderProps> = ({ chil
         return msg;
       })
     }));
-  };
+  }, [username]);
 
-  // Join group
-  const joinGroup = (groupId: string) => {
-    if (!username || joinedGroups.has(groupId)) return;
-
-    setJoinedGroups(prev => new Set([...prev, groupId]));
-
-    // Add user to online users list
-    setOnlineUsers(prev => ({
-      ...prev,
-      [groupId]: [
-        ...(prev[groupId] || []).filter(user => user.id !== username),
-        {
-          id: username,
-          name: username,
-          avatar: avatar || '',
-          status: 'online',
-          lastSeen: new Date()
-        }
-      ]
-    }));
-
-    // Send system message
-    const systemMessage: Message = {
-      id: `system-${Date.now()}`,
-      content: `${username} joined the group`,
-      senderId: 'system',
-      senderName: 'System',
+  const simulateReceivedMessage = useCallback((groupId: string, content: string, senderName: string) => {
+    const newMessage: ChatMessage = {
+      id: `msg-${Date.now()}-${Math.random()}`,
+      content,
+      senderId: `user-${senderName.toLowerCase()}`,
+      senderName,
       senderAvatar: '',
       groupId,
-      timestamp: new Date(),
-      type: 'system'
+      timestamp: Date.now(),
+      type: 'text'
     };
-
-    setTimeout(() => {
-      setMessages(prev => ({
-        ...prev,
-        [groupId]: [...(prev[groupId] || []), systemMessage]
-      }));
-    }, 500);
-  };
-
-  // Leave group
-  const leaveGroup = (groupId: string) => {
-    if (!username || !joinedGroups.has(groupId)) return;
-
-    setJoinedGroups(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(groupId);
-      return newSet;
-    });
-
-    // Remove user from online users list
-    setOnlineUsers(prev => ({
+    
+    setMessages(prev => ({
       ...prev,
-      [groupId]: (prev[groupId] || []).filter(user => user.id !== username)
+      [groupId]: [...(prev[groupId] || []), newMessage]
     }));
 
-    // Clear typing indicator
-    setTypingUsers(prev => ({
-      ...prev,
-      [groupId]: (prev[groupId] || []).filter(userId => userId !== username)
-    }));
-  };
-
-  // Start typing
-  const startTyping = (groupId: string) => {
-    if (!username || !isConnected) return;
-
-    // Clear existing timeout
-    if (typingTimeout.current[groupId]) {
-      clearTimeout(typingTimeout.current[groupId]);
+    // Trigger push notification when tab is not active or user is not the sender
+    if (!currentActiveTab || senderName !== username) {
+      addNotification({
+        type: 'message',
+        title: `New message from ${senderName}`,
+        message: content.substring(0, 50) + (content.length > 50 ? '...' : ''),
+        groupId,
+        userId: `user-${senderName.toLowerCase()}`,
+        avatar: 'https://ui-avatars.com/api/?name=' + encodeURIComponent(senderName)
+      });
     }
-
-    // Add user to typing list
-    setTypingUsers(prev => ({
-      ...prev,
-      [groupId]: [...(prev[groupId] || []).filter(userId => userId !== username), username]
-    }));
-
-    // Auto-stop typing after 3 seconds
-    typingTimeout.current[groupId] = setTimeout(() => {
-      stopTyping(groupId);
-    }, 3000);
-  };
-
-  // Stop typing
-  const stopTyping = (groupId: string) => {
-    if (!username) return;
-
-    // Clear timeout
-    if (typingTimeout.current[groupId]) {
-      clearTimeout(typingTimeout.current[groupId]);
-      delete typingTimeout.current[groupId];
-    }
-
-    // Remove user from typing list
-    setTypingUsers(prev => ({
-      ...prev,
-      [groupId]: (prev[groupId] || []).filter(userId => userId !== username)
-    }));
-  };
+  }, [currentActiveTab, username, addNotification]);
 
   const value: RealTimeChatContextType = {
     isConnected,
@@ -381,7 +394,8 @@ export const RealTimeChatProvider: React.FC<RealTimeChatProviderProps> = ({ chil
     typingUsers,
     startTyping,
     stopTyping,
-    voiceActivity
+    voiceActivity,
+    simulateReceivedMessage
   };
 
   return (
@@ -399,4 +413,9 @@ export const useRealTimeChat = () => {
   return context;
 };
 
-export default RealTimeChatProvider;
+// Request notification permission on load
+if (typeof window !== 'undefined' && 'Notification' in window) {
+  if (Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}

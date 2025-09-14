@@ -54,6 +54,7 @@ model GroupMember {
   groupId    String
   role       MemberRole @default(LISTENER)
   seatPosition Int?
+  requestedSeatPosition Int?
   isMuted    Boolean  @default(false)
   isAdmin    Boolean  @default(false)
   joinedAt   DateTime @default(now())

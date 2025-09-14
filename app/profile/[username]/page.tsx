@@ -1,7 +1,7 @@
 // app/profile/[username]/page.tsx
 "use client";
 
-import { FaArrowLeft, FaCommentDots, FaGlobe, FaGraduationCap } from 'react-icons/fa';
+import { FaArrowLeft, FaCommentDots, FaGlobe, FaGraduationCap, FaClock } from 'react-icons/fa';
 import Link from 'next/link';
 
 // This function simulates fetching user data. Notice the bio and language fields are complete.
@@ -12,21 +12,39 @@ const getUserData = (username: string) => {
       avatarUrl: 'https://randomuser.me/api/portraits/women/44.jpg',
       bio: "Hola! I'm a designer from Spain, currently living in London. I love photography, hiking, and helping others learn Spanish. Looking to practice my English!",
       nativeLanguage: 'Spanish',
-      learningLanguages: ['English', 'French']
+      learningLanguages: ['English', 'French'],
+      talkTime: {
+        thisWeek: '4h 32m',
+        thisMonth: '18h 45m',
+        totalTime: '127h 23m',
+        currentStreak: 8
+      }
     },
     'kenji-tanaka': {
       name: 'Kenji Tanaka',
       avatarUrl: 'https://randomuser.me/api/portraits/men/32.jpg',
       bio: "Hello from Tokyo! I'm a software developer. My hobbies include video games and cooking. I can help you with Japanese if you can help me with English.",
       nativeLanguage: 'Japanese',
-      learningLanguages: ['English']
+      learningLanguages: ['English'],
+      talkTime: {
+        thisWeek: '2h 15m',
+        thisMonth: '9h 30m',
+        totalTime: '76h 48m',
+        currentStreak: 3
+      }
     },
     'fatima-al-fassi': {
       name: 'Fatima Al-Fassi',
       avatarUrl: 'https://randomuser.me/api/portraits/women/22.jpg',
       bio: "Marhabaan! I am a student of literature from Morocco. I enjoy reading classic novels and learning about different cultures. I'm looking for partners to practice my English.",
       nativeLanguage: 'Arabic',
-      learningLanguages: ['English', 'German']
+      learningLanguages: ['English', 'German'],
+      talkTime: {
+        thisWeek: '6h 18m',
+        thisMonth: '24h 12m',
+        totalTime: '203h 55m',
+        currentStreak: 12
+      }
     },
   };
 
@@ -104,6 +122,54 @@ const UserProfilePage = ({ params }: { params: { username: string } }) => {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Talk Time Section */}
+            <div className="mt-8">
+              <h2 className="text-xl font-semibold text-gray-700 mb-4">Talk Time Statistics</h2>
+              <div className="bg-gray-50 rounded-lg p-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-2">
+                      <FaClock className="text-blue-500 mr-2" />
+                    </div>
+                    <div className="text-lg font-bold text-blue-600">{userData.talkTime.thisWeek}</div>
+                    <div className="text-gray-500 text-sm">This Week</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-2">
+                      <FaClock className="text-purple-500 mr-2" />
+                    </div>
+                    <div className="text-lg font-bold text-purple-600">{userData.talkTime.thisMonth}</div>
+                    <div className="text-gray-500 text-sm">This Month</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-2">
+                      <span className="text-orange-500 mr-2">🔥</span>
+                    </div>
+                    <div className="text-lg font-bold text-orange-600">{userData.talkTime.currentStreak}</div>
+                    <div className="text-gray-500 text-sm">Day Streak</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-2">
+                      <span className="text-indigo-500 mr-2">📊</span>
+                    </div>
+                    <div className="text-lg font-bold text-indigo-600">{userData.talkTime.totalTime}</div>
+                    <div className="text-gray-500 text-sm">All Time</div>
+                  </div>
+                </div>
+                
+                {userData.talkTime.currentStreak >= 7 && (
+                  <div className="mt-4 bg-orange-50 border border-orange-200 rounded-lg p-3">
+                    <div className="flex items-center text-orange-700">
+                      <span className="mr-2">🔥</span>
+                      <span className="text-sm font-medium">
+                        {userData.name.split(' ')[0]} is on a {userData.talkTime.currentStreak}-day conversation streak!
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

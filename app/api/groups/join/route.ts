@@ -5,16 +5,17 @@ export async function POST(request: NextRequest) {
   try {
     console.log('POST /api/groups/join called');
     const body = await request.json();
-    console.log('Join group request:', body);
+    console.log('Join group request body:', JSON.stringify(body, null, 2));
     
-    const { userId, groupId, action } = body;
+    const { userId, groupId, action = 'join' } = body;
+    console.log('Extracted values:', { userId, groupId, action });
 
     // Validate required fields
-    if (!userId || !groupId || !action) {
+    if (!userId || !groupId) {
       return NextResponse.json(
         { 
           success: false,
-          error: 'Missing required fields: userId, groupId, action' 
+          error: 'Missing required fields: userId, groupId' 
         },
         { status: 400 }
       );
@@ -30,21 +31,72 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate that the user exists
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id, username')
-      .eq('id', userId)
-      .single();
+    // Validate that the user exists (or is a demo user)
+    let user;
+    if (userId.startsWith('demo-user-')) {
+      // Handle demo users
+      const demoUserMap = {
+        'demo-user-1': { id: 'demo-user-1', username: 'demo_user' },
+        'demo-user-2': { id: 'demo-user-2', username: 'language_learner' }
+      };
+      
+      user = demoUserMap[userId as keyof typeof demoUserMap];
+      if (!user) {
+        return NextResponse.json(
+          { 
+            success: false,
+            error: 'Invalid demo user ID' 
+          },
+          { status: 400 }
+        );
+      }
+      
+      // Ensure demo user exists in database
+      const { data: existingUser, error: checkError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', userId)
+        .single();
+        
+      if (checkError || !existingUser) {
+        // Create demo user in database
+        const { error: createError } = await supabase
+          .from('users')
+          .insert({
+            id: userId,
+            username: user.username,
+            email: userId === 'demo-user-1' ? 'demo@example.com' : 'learner@example.com',
+            nationality: userId === 'demo-user-1' ? 'US' : 'ES',
+            nativeLanguage: userId === 'demo-user-1' ? 'English' : 'Spanish',
+            targetLanguage: userId === 'demo-user-1' ? 'Spanish' : 'English'
+          });
+          
+        if (createError) {
+          console.error('Failed to create demo user:', createError);
+          // Continue anyway, as user might already exist
+        }
+      }
+      
+      console.log('Using demo user:', user.username);
+    } else {
+      // For real users, validate they exist in the database
+      const { data: dbUser, error: userError } = await supabase
+        .from('users')
+        .select('id, username')
+        .eq('id', userId)
+        .single();
 
-    if (userError || !user) {
-      return NextResponse.json(
-        { 
-          success: false,
-          error: 'Invalid user ID' 
-        },
-        { status: 400 }
-      );
+      if (userError || !dbUser) {
+        return NextResponse.json(
+          { 
+            success: false,
+            error: 'Invalid user ID' 
+          },
+          { status: 400 }
+        );
+      }
+      
+      user = dbUser;
     }
 
     // Validate that the group exists and is active
@@ -93,13 +145,14 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Add user to group
+      // Add user to group as listener (waiting area)
       const { data: membership, error: joinError } = await supabase
         .from('group_members')
         .insert({
           userId: userId,
           groupId: groupId,
-          role: 'PARTICIPANT',
+          role: 'LISTENER',
+          seatPosition: null, // No seat assigned yet - in waiting area
           isAdmin: false,
           joinedAt: new Date().toISOString()
         })

@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FaUsers, FaSearch, FaFilter, FaPlus, FaGlobe, FaComments, FaStar } from 'react-icons/fa';
 import { getFlagEmoji } from '@/utils/flags';
+import { useAuth } from '@/context/AuthContext';
+import GroupCard from '@/components/GroupCard';
 
 interface Group {
-  id: number;
+  id: string;
   name: string;
   language: string;
   targetLanguage: string;
@@ -20,109 +22,133 @@ interface Group {
     name: string;
     nationality: string;
   };
+  ownerId: string;
   isPopular?: boolean;
   lastActive: string;
+  isJoined?: boolean;
 }
-
-const mockGroups: Group[] = [
-  {
-    id: 1,
-    name: 'English Daily Conversation',
-    language: 'English',
-    targetLanguage: 'English',
-    memberCount: 452,
-    activeNow: 12,
-    description: 'Practice your daily English speaking skills with native speakers. All levels welcome!',
-    level: 'Beginner',
-    category: 'Conversation',
-    owner: { name: 'Sarah Johnson', nationality: 'US' },
-    isPopular: true,
-    lastActive: '2 minutes ago'
-  },
-  {
-    id: 2,
-    name: 'Japanese Beginners Club',
-    language: 'Japanese',
-    targetLanguage: 'Japanese',
-    memberCount: 128,
-    activeNow: 8,
-    description: 'A friendly group for absolute beginners to practice basic greetings and phrases.',
-    level: 'Beginner',
-    category: 'Study Group',
-    owner: { name: 'Takeshi Yamamoto', nationality: 'JP' },
-    lastActive: '5 minutes ago'
-  },
-  {
-    id: 3,
-    name: 'Spanish Film Discussion',
-    language: 'Spanish',
-    targetLanguage: 'Spanish',
-    memberCount: 76,
-    activeNow: 4,
-    description: 'Watch Spanish movies together and discuss them to improve listening skills.',
-    level: 'Intermediate',
-    category: 'Entertainment',
-    owner: { name: 'Carlos Rodriguez', nationality: 'ES' },
-    lastActive: '15 minutes ago'
-  },
-  {
-    id: 4,
-    name: 'French Business Language',
-    language: 'French',
-    targetLanguage: 'French',
-    memberCount: 234,
-    activeNow: 15,
-    description: 'Professional French for business meetings, presentations, and networking.',
-    level: 'Advanced',
-    category: 'Professional',
-    owner: { name: 'Marie Dubois', nationality: 'FR' },
-    isPopular: true,
-    lastActive: '1 minute ago'
-  },
-  {
-    id: 5,
-    name: 'German Grammar Workshop',
-    language: 'German',
-    targetLanguage: 'German',
-    memberCount: 89,
-    activeNow: 6,
-    description: 'Focus on German grammar rules, exercises, and practical applications.',
-    level: 'Intermediate',
-    category: 'Grammar',
-    owner: { name: 'Hans Mueller', nationality: 'DE' },
-    lastActive: '8 minutes ago'
-  },
-  {
-    id: 6,
-    name: 'Korean Pop Culture Chat',
-    language: 'Korean',
-    targetLanguage: 'Korean',
-    memberCount: 312,
-    activeNow: 22,
-    description: 'Discuss K-pop, K-dramas, and Korean culture while practicing the language.',
-    level: 'Beginner',
-    category: 'Culture',
-    owner: { name: 'Park Min-jun', nationality: 'KR' },
-    isPopular: true,
-    lastActive: 'Active now'
-  }
-];
 
 const GroupsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [allGroups, setAllGroups] = useState<Group[]>(mockGroups);
+  const [allGroups, setAllGroups] = useState<Group[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
 
-  // Load user-created groups from localStorage on component mount
+  // Load groups from API
   useEffect(() => {
-    const userCreatedGroups = JSON.parse(localStorage.getItem('userCreatedGroups') || '[]');
-    if (userCreatedGroups.length > 0) {
-      setAllGroups([...userCreatedGroups, ...mockGroups]);
-    }
-  }, []);
+    const fetchGroups = async () => {
+      if (!isAuthenticated || !user) {
+        setError('Please log in to view groups');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        
+        const response = await fetch('/api/groups', {
+          headers: {
+            'User-ID': user.id, // Pass user ID for membership checking
+          },
+        });
+        const data = await response.json();
+        
+        if (data.success && data.groups) {
+          // Transform API data to match the Group interface
+          const transformedGroups = data.groups.map((group: any) => ({
+            id: group.id,
+            name: group.name,
+            language: group.language,
+            targetLanguage: group.language,
+            memberCount: group.group_members?.[0]?.count || 0,
+            activeNow: Math.floor(Math.random() * Math.min((group.group_members?.[0]?.count || 0), 20)),
+            description: group.description || 'No description provided',
+            level: 'Beginner' as const,
+            category: 'Conversation',
+            owner: {
+              name: group.users?.username || 'Unknown',
+              nationality: group.users?.nationality || 'US'
+            },
+            ownerId: group.ownerId, // Add owner ID for ownership checking
+            isPopular: (group.group_members?.[0]?.count || 0) > 100,
+            lastActive: new Date(group.updatedAt).toLocaleString(),
+            isJoined: group.isJoined || false
+          }));
+          
+          setAllGroups(transformedGroups);
+          setError(null);
+        } else {
+          console.error('Failed to fetch groups:', data.error);
+          setError('Failed to load groups');
+          setAllGroups([]);
+        }
+      } catch (error) {
+        console.error('Error fetching groups:', error);
+        setError('Failed to connect to server');
+        setAllGroups([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGroups();
+  }, [isAuthenticated, user]);
+
+  // Refresh groups when someone joins
+  const handleJoinSuccess = () => {
+    // Refresh the groups list to get updated member counts
+    setLoading(true);
+    const fetchGroups = async () => {
+      if (!isAuthenticated || !user) {
+        setError('Please log in to view groups');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/groups', {
+          headers: {
+            'User-ID': user.id,
+          },
+        });
+        const data = await response.json();
+        
+        if (data.success && data.groups) {
+          const transformedGroups = data.groups.map((group: any) => ({
+            id: group.id,
+            name: group.name,
+            language: group.language,
+            targetLanguage: group.language,
+            memberCount: group.group_members?.[0]?.count || 0,
+            activeNow: Math.floor(Math.random() * Math.min((group.group_members?.[0]?.count || 0), 20)),
+            description: group.description || 'No description provided',
+            level: 'Beginner' as const,
+            category: 'Conversation',
+            owner: {
+              name: group.users?.username || 'Unknown',
+              nationality: group.users?.nationality || 'US'
+            },
+            isPopular: (group.group_members?.[0]?.count || 0) > 100,
+            lastActive: new Date(group.updatedAt).toLocaleString(),
+            isJoined: group.isJoined || false
+          }));
+          
+          setAllGroups(transformedGroups);
+        }
+      } catch (error) {
+        console.error('Error refreshing groups:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGroups();
+  };
 
   const languages = ['English', 'Japanese', 'Spanish', 'French', 'German', 'Korean'];
   const levels = ['Beginner', 'Intermediate', 'Advanced'];
@@ -137,15 +163,6 @@ const GroupsPage = () => {
     
     return matchesSearch && matchesLanguage && matchesLevel && matchesCategory;
   });
-
-  const getLevelColor = (level: string) => {
-    switch (level) {
-      case 'Beginner': return 'bg-green-600';
-      case 'Intermediate': return 'bg-yellow-600';
-      case 'Advanced': return 'bg-red-600';
-      default: return 'bg-gray-600';
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gray-900 p-4 md:p-8">
@@ -259,90 +276,68 @@ const GroupsPage = () => {
 
       {/* Results Summary */}
       <div className="mb-6">
-        <p className="text-gray-400">
-          Showing {filteredGroups.length} of {allGroups.length} groups
-        </p>
+        {loading ? (
+          <p className="text-gray-400">Loading groups...</p>
+        ) : error ? (
+          <p className="text-red-400">⚠️ {error}</p>
+        ) : (
+          <p className="text-gray-400">
+            Showing {filteredGroups.length} of {allGroups.length} groups
+          </p>
+        )}
       </div>
+
+      {/* Loading State */}
+      {loading && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="bg-gray-800 rounded-xl border border-gray-700 p-6 animate-pulse">
+              <div className="h-6 bg-gray-700 rounded mb-4"></div>
+              <div className="h-4 bg-gray-700 rounded mb-2 w-3/4"></div>
+              <div className="h-4 bg-gray-700 rounded mb-4 w-1/2"></div>
+              <div className="flex justify-between">
+                <div className="h-4 bg-gray-700 rounded w-1/4"></div>
+                <div className="h-4 bg-gray-700 rounded w-1/4"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <div className="text-center py-12">
+          <p className="text-gray-400 mb-4">Unable to load groups from server</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Groups Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filteredGroups.map(group => (
-          <div key={group.id} className="bg-gray-800 rounded-xl border border-gray-700 hover:border-blue-500 transition-all duration-200 overflow-hidden group cursor-pointer"
-               onClick={() => router.push(`/groups/${group.id}`)}>
-            {/* Card Header */}
-            <div className="p-6 pb-4">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center space-x-2">
-                  <h3 className="text-xl font-semibold text-white group-hover:text-blue-400 transition-colors">
-                    {group.name}
-                  </h3>
-                  {group.isPopular && (
-                    <div className="bg-yellow-500 text-black px-2 py-1 rounded-full text-xs font-bold flex items-center space-x-1">
-                      <FaStar className="text-xs" />
-                      <span>Popular</span>
-                    </div>
-                  )}
-                </div>
-                <div className="text-2xl">
-                  {getFlagEmoji(group.owner.nationality)}
-                </div>
-              </div>
-
-              <p className="text-gray-300 text-sm mb-4 line-clamp-2">
-                {group.description}
-              </p>
-
-              {/* Tags */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-medium">
-                  {group.language}
-                </span>
-                <span className={`${getLevelColor(group.level)} text-white px-3 py-1 rounded-full text-xs font-medium`}>
-                  {group.level}
-                </span>
-                <span className="bg-gray-600 text-gray-200 px-3 py-1 rounded-full text-xs font-medium">
-                  {group.category}
-                </span>
-              </div>
-            </div>
-
-            {/* Card Footer */}
-            <div className="px-6 py-4 bg-gray-750 border-t border-gray-700">
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-1 text-gray-400">
-                    <FaUsers className="text-xs" />
-                    <span>{group.memberCount}</span>
-                  </div>
-                  <div className="flex items-center space-x-1 text-green-400">
-                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                    <span>{group.activeNow} active</span>
-                  </div>
-                </div>
-                <div className="text-gray-500 text-xs">
-                  {group.lastActive}
-                </div>
-              </div>
-
-              <div className="mt-3 flex items-center justify-between">
-                <div className="text-gray-400 text-xs">
-                  by {group.owner.name}
-                </div>
-                <Link
-                  href={`/groups/${group.id}`}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  Join Group
-                </Link>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      {!loading && !error && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          {filteredGroups.map(group => (
+            <GroupCard
+              key={group.id}
+              id={group.id}
+              name={group.name}
+              language={group.language}
+              memberCount={group.memberCount}
+              description={group.description}
+              isJoined={group.isJoined}
+              ownerId={group.ownerId}
+              onJoinSuccess={handleJoinSuccess}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Empty State */}
-      {filteredGroups.length === 0 && (
+      {!loading && !error && filteredGroups.length === 0 && (
         <div className="text-center py-16">
           <div className="w-24 h-24 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-6">
             <FaUsers className="text-4xl text-gray-500" />

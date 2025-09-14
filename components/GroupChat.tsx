@@ -5,6 +5,7 @@ import { useUser } from '@/context/UserContext';
 import { useNotifications } from '@/context/NotificationContext';
 import { useRealTimeChat } from '@/context/RealTimeChatContext';
 import { MobileInput, MobileButton } from './MobileOptimized';
+import { ConnectionStatus } from './ConnectionStatus';
 import { 
   FaPaperPlane, 
   FaSmile, 
@@ -63,13 +64,14 @@ const GroupChat: React.FC<GroupChatProps> = ({
     typingUsers,
     startTyping,
     stopTyping,
-    isConnected
+    isConnected,
+    connectionStatus,
+    simulateReceivedMessage
   } = useRealTimeChat();
   
   const [newMessage, setNewMessage] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [replyingTo, setReplyingTo] = useState<any | null>(null);
-  const [selectedMessage, setSelectedMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -96,7 +98,8 @@ const GroupChat: React.FC<GroupChatProps> = ({
   };
 
   // Handle typing indicators
-  const handleInputChange = (value: string) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
     setNewMessage(value);
     
     // Start typing indicator
@@ -122,7 +125,7 @@ const GroupChat: React.FC<GroupChatProps> = ({
 
     // Send through real-time context
     sendMessage(groupId, newMessage, 'text', replyingTo ? {
-      messageId: replyingTo.id,
+      id: replyingTo.id,
       content: replyingTo.content.substring(0, 50) + (replyingTo.content.length > 50 ? '...' : ''),
       senderName: replyingTo.senderName
     } : undefined);
@@ -149,15 +152,15 @@ const GroupChat: React.FC<GroupChatProps> = ({
     } else {
       addReaction(groupId, messageId, emoji);
     }
-    
-    setSelectedMessage(null);
   };
 
-  const formatTime = (date: Date) => {
+  const formatTime = (timestamp: Date | string | number) => {
+    const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (timestamp: Date | string | number) => {
+    const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
@@ -175,7 +178,12 @@ const GroupChat: React.FC<GroupChatProps> = ({
     const groups: { [date: string]: any[] } = {};
     
     msgs.forEach(message => {
-      const dateKey = message.timestamp.toDateString();
+      // Convert timestamp to Date object if it's not already one
+      const timestamp = message.timestamp instanceof Date 
+        ? message.timestamp 
+        : new Date(message.timestamp);
+      
+      const dateKey = timestamp.toDateString();
       if (!groups[dateKey]) {
         groups[dateKey] = [];
       }
@@ -198,15 +206,28 @@ const GroupChat: React.FC<GroupChatProps> = ({
             <h3 className="text-white font-semibold text-lg">💬 Group Chat</h3>
             <div className="flex items-center space-x-2">
               <p className="text-gray-400 text-sm">{groupName}</p>
-              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              <span className="text-xs text-gray-500">
-                {isConnected ? 'Connected' : 'Disconnected'}
-              </span>
+              <ConnectionStatus showChatStatus={true} className="text-xs" />
             </div>
             {groupOnlineUsers.length > 0 && (
-              <p className="text-xs text-gray-500">
-                {groupOnlineUsers.length} online
-              </p>
+              <div className="flex items-center space-x-2">
+                <p className="text-xs text-gray-500">
+                  {groupOnlineUsers.length} online
+                </p>
+                <div className="flex -space-x-1">
+                  {groupOnlineUsers.slice(0, 3).map(user => (
+                    <div
+                      key={user.userId}
+                      className="w-4 h-4 rounded-full bg-green-500 border border-gray-800"
+                      title={user.username}
+                    />
+                  ))}
+                  {groupOnlineUsers.length > 3 && (
+                    <div className="w-4 h-4 rounded-full bg-gray-600 border border-gray-800 flex items-center justify-center">
+                      <span className="text-xs text-white">+{groupOnlineUsers.length - 3}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </div>
           <button
@@ -219,7 +240,7 @@ const GroupChat: React.FC<GroupChatProps> = ({
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
         {Object.entries(groupMessagesByDate(messages)).map(([date, dateMessages]) => (
           <div key={date}>
             {/* Date separator */}
@@ -236,8 +257,45 @@ const GroupChat: React.FC<GroupChatProps> = ({
               const showAvatar = index === 0 || dateMessages[index - 1].senderId !== message.senderId;
 
               return (
-                <div key={message.id} className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} ${isSystem ? 'justify-center' : ''}`}>
-                  <div className={`flex ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'} items-start space-x-2 max-w-[80%] ${isSystem ? 'max-w-full' : ''}`}>
+                <div key={message.id} className={`group flex ${isCurrentUser ? 'justify-end' : 'justify-start'} ${isSystem ? 'justify-center' : ''} mb-6`}>
+                  <div className={`flex ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'} items-start space-x-3 max-w-[80%] ${isSystem ? 'max-w-full' : ''}`}>
+                    {/* Left-side message controls for received messages */}
+                    {!isCurrentUser && !isSystem && (
+                      <div className="flex flex-col space-y-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 mt-8 mr-1">
+                        <button
+                          onClick={() => handleReaction(message.id, '👍')}
+                          className="p-2 rounded-full hover:bg-gray-600 text-sm transition-colors"
+                          title="React with thumbs up"
+                        >
+                          👍
+                        </button>
+                        <button
+                          onClick={() => handleReaction(message.id, '❤️')}
+                          className="p-2 rounded-full hover:bg-gray-600 text-sm transition-colors"
+                          title="React with heart"
+                        >
+                          ❤️
+                        </button>
+                        <button
+                          onClick={() => handleReaction(message.id, '😊')}
+                          className="p-2 rounded-full hover:bg-gray-600 text-sm transition-colors"
+                          title="React with smile"
+                        >
+                          😊
+                        </button>
+                        <button
+                          onClick={() => {
+                            setReplyingTo(message);
+                            inputRef.current?.focus();
+                          }}
+                          className="p-2 rounded-full hover:bg-gray-600 transition-colors"
+                          title="Reply to message"
+                        >
+                          <FaReply className="text-xs text-gray-400" />
+                        </button>
+                      </div>
+                    )}
+
                     {/* Avatar */}
                     {!isCurrentUser && !isSystem && (
                       <div className="flex-shrink-0">
@@ -279,8 +337,7 @@ const GroupChat: React.FC<GroupChatProps> = ({
                             : isCurrentUser 
                               ? 'bg-blue-600 text-white' 
                               : 'bg-gray-700 text-white'
-                        } cursor-pointer`}
-                        onClick={() => setSelectedMessage(selectedMessage === message.id ? null : message.id)}
+                        }`}
                       >
                         <div className="break-words">{message.content}</div>
                         
@@ -316,38 +373,45 @@ const GroupChat: React.FC<GroupChatProps> = ({
                             })}
                           </div>
                         )}
-
-                        {/* Message actions */}
-                        {selectedMessage === message.id && !isSystem && (
-                          <div className="absolute top-0 right-0 transform translate-x-full -translate-y-2 bg-gray-900 rounded-lg shadow-lg p-2 z-10">
-                            <div className="flex space-x-1">
-                              {reactions.map(emoji => (
-                                <button
-                                  key={emoji}
-                                  onClick={() => handleReaction(message.id, emoji)}
-                                  className="hover:bg-gray-700 p-1 rounded text-lg"
-                                >
-                                  {emoji}
-                                </button>
-                              ))}
-                            </div>
-                            <div className="border-t border-gray-700 mt-2 pt-2 flex space-x-2">
-                              <button
-                                onClick={() => {
-                                  setReplyingTo(message);
-                                  setSelectedMessage(null);
-                                  inputRef.current?.focus();
-                                }}
-                                className="text-gray-400 hover:text-white p-1 rounded"
-                                title="Reply"
-                              >
-                                <FaReply className="text-sm" />
-                              </button>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
+
+                    {/* Right-side message controls for sent messages */}
+                    {isCurrentUser && !isSystem && (
+                      <div className="flex flex-col space-y-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 mt-8 ml-1">
+                        <button
+                          onClick={() => handleReaction(message.id, '👍')}
+                          className="p-2 rounded-full hover:bg-gray-600 text-sm transition-colors"
+                          title="React with thumbs up"
+                        >
+                          👍
+                        </button>
+                        <button
+                          onClick={() => handleReaction(message.id, '❤️')}
+                          className="p-2 rounded-full hover:bg-gray-600 text-sm transition-colors"
+                          title="React with heart"
+                        >
+                          ❤️
+                        </button>
+                        <button
+                          onClick={() => handleReaction(message.id, '😊')}
+                          className="p-2 rounded-full hover:bg-gray-600 text-sm transition-colors"
+                          title="React with smile"
+                        >
+                          😊
+                        </button>
+                        <button
+                          onClick={() => {
+                            setReplyingTo(message);
+                            inputRef.current?.focus();
+                          }}
+                          className="p-2 rounded-full hover:bg-gray-600 transition-colors"
+                          title="Reply to message"
+                        >
+                          <FaReply className="text-xs text-gray-400" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -457,6 +521,47 @@ const GroupChat: React.FC<GroupChatProps> = ({
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Multi-user testing panel - Development only */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-4 p-3 bg-gray-800 rounded border border-gray-600">
+            <h4 className="text-sm font-medium text-gray-300 mb-2">🧪 Multi-User Testing</h4>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => simulateReceivedMessage(groupId, "Hey everyone! How's the language practice going?", "Alex")}
+                className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded"
+              >
+                Simulate Alex Message
+              </button>
+              <button
+                onClick={() => simulateReceivedMessage(groupId, "I'm struggling with pronunciation. Any tips?", "Maria")}
+                className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded"
+              >
+                Simulate Maria Message
+              </button>
+              <button
+                onClick={() => simulateReceivedMessage(groupId, "Let's practice some conversation! ¿Cómo están?", "Carlos")}
+                className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs rounded"
+              >
+                Simulate Carlos Message
+              </button>
+              <button
+                onClick={() => {
+                  // Simulate multiple rapid messages
+                  setTimeout(() => simulateReceivedMessage(groupId, "That's a great question!", "Alex"), 100);
+                  setTimeout(() => simulateReceivedMessage(groupId, "I can help with pronunciation!", "Sarah"), 500);
+                  setTimeout(() => simulateReceivedMessage(groupId, "Let's set up a voice chat session", "Maria"), 1000);
+                }}
+                className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded"
+              >
+                Simulate Conversation
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mt-2">
+              💡 Open multiple browser tabs to test real-time sync • Check notifications when tab is inactive
+            </p>
           </div>
         )}
       </div>
