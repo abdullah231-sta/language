@@ -26,6 +26,8 @@ model User {
   groupMemberships GroupMember[]
   sentMessages     Message[]
   conversations    Conversation[]
+  messageReactions MessageReaction[]
+  messageReadStatuses MessageReadStatus[]
   
   @@map("users")
 }
@@ -56,6 +58,7 @@ model GroupMember {
   seatPosition Int?
   requestedSeatPosition Int?
   isMuted    Boolean  @default(false)
+  isDeafened Boolean  @default(false)
   isAdmin    Boolean  @default(false)
   joinedAt   DateTime @default(now())
 
@@ -74,11 +77,17 @@ model Message {
   groupId      String?
   conversationId String?
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  isEdited     Boolean  @default(false)
+  isDeleted    Boolean  @default(false)
+  deletedAt    DateTime?
 
   // Relationships
   sender       User     @relation(fields: [senderId], references: [id])
   group        Group?   @relation(fields: [groupId], references: [id])
   conversation Conversation? @relation(fields: [conversationId], references: [id])
+  reactions    MessageReaction[]
+  readStatuses MessageReadStatus[]
 
   @@map("messages")
 }
@@ -103,4 +112,33 @@ enum MemberRole {
   ADMIN
   PARTICIPANT
   LISTENER
+}
+
+model MessageReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  // Relationships
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@map("message_reactions")
+}
+
+model MessageReadStatus {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  readAt    DateTime @default(now())
+
+  // Relationships
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@map("message_read_status")
 }

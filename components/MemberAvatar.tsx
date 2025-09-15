@@ -3,6 +3,7 @@
 import { FaCrown, FaPlus, FaMicrophone } from 'react-icons/fa';
 import { getFlagEmoji } from '@/utils/flags';
 import { useVoice } from '@/context/VoiceContext';
+import React from 'react';
 
 interface MemberAvatarProps {
   name: string;
@@ -19,14 +20,6 @@ interface MemberAvatarProps {
 const MemberAvatar = ({ name, avatarUrl, isHost = false, isInvite = false, isOwner = false, isSpeaker = false, isPurpleCrownAdmin = false, nationality, userId }: MemberAvatarProps) => {
   const { voiceState } = useVoice();
   const isSpeaking = userId && voiceState.speakingUsers.has(userId);
-  
-  // Debug logging
-  console.log('MemberAvatar:', { 
-    name, 
-    userId, 
-    speakingUsers: Array.from(voiceState.speakingUsers), 
-    isSpeaking 
-  });
   // If this is the "Invite" button
   if (isInvite) {
     return (
@@ -85,4 +78,4 @@ const MemberAvatar = ({ name, avatarUrl, isHost = false, isInvite = false, isOwn
   );
 };
 
-export default MemberAvatar;
+export default React.memo(MemberAvatar);

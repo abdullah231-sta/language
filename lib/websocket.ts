@@ -1,4 +1,6 @@
 // lib/websocket.ts
+import { io, Socket } from 'socket.io-client';
+
 export interface WebSocketMessage {
   type: string;
   payload: any;
@@ -34,7 +36,7 @@ export interface TypingUser {
 
 class WebSocketService {
   private static instance: WebSocketService;
-  private ws: WebSocket | null = null;
+  private socket: Socket | null = null;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
@@ -52,12 +54,14 @@ class WebSocketService {
 
   connect(userId: string, username: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      if (this.ws?.readyState === WebSocket.OPEN) {
+      if (this.socket?.connected) {
+        console.log('WebSocket already connected, resolving immediately');
         resolve();
         return;
       }
 
       if (this.isConnecting) {
+        console.log('WebSocket connection already in progress, rejecting...');
         reject(new Error('Connection already in progress'));
         return;
       }
@@ -66,55 +70,97 @@ class WebSocketService {
       this.currentUserId = userId;
       this.currentUsername = username;
 
-      // For development, we'll use a mock WebSocket since Next.js doesn't support WebSocket routes directly
-      // In production, you'd connect to your WebSocket server
-      const wsUrl = process.env.NODE_ENV === 'development' 
-        ? `ws://localhost:3001?userId=${userId}&username=${encodeURIComponent(username)}`
-        : `wss://${window.location.host}/ws?userId=${userId}&username=${encodeURIComponent(username)}`;
+      const serverUrl = process.env.NODE_ENV === 'development'
+        ? 'http://localhost:3001'
+        : window.location.origin;
+
+      console.log('Initializing WebSocket connection to:', serverUrl);
 
       try {
-        this.ws = new WebSocket(wsUrl);
+        this.socket = io(serverUrl, {
+          transports: ['websocket', 'polling'],
+          timeout: 5000,
+          reconnection: true,
+          reconnectionAttempts: this.maxReconnectAttempts,
+          reconnectionDelay: this.reconnectDelay
+        });
 
-        this.ws.onopen = () => {
+        this.socket.on('connect', () => {
+          console.log('WebSocket connected successfully, socket ID:', this.socket?.id);
           this.isConnecting = false;
           this.reconnectAttempts = 0;
+
+          // Authenticate with the server
+          console.log('Sending authentication request...');
+          this.socket!.emit('authenticate', { userId, username });
+
           this.emit('connection_established', {});
           resolve();
-        };
+        });
 
-        this.ws.onmessage = (event) => {
-          try {
-            const message: WebSocketMessage = JSON.parse(event.data);
-            this.emit(message.type, message.payload);
-          } catch (error) {
-            console.error('Failed to parse WebSocket message:', error);
+        this.socket.on('authenticated', (data) => {
+          if (data.success) {
+            console.log('Successfully authenticated with Socket.IO server');
           }
-        };
+        });
 
-        this.ws.onclose = () => {
+        this.socket.on('connect_error', (error) => {
           this.isConnecting = false;
-          this.emit('connection_lost', {});
-          this.handleReconnect();
-        };
-
-        this.ws.onerror = (error) => {
-          this.isConnecting = false;
-          console.error('WebSocket error:', error);
-          this.emit('connection_error', { error });
+          console.error('Socket.IO connection error:', error);
+          this.emit('connection_error', {
+            error: {
+              message: error?.message || 'Connection failed',
+              type: 'connection_error',
+              description: 'Failed to connect to WebSocket server'
+            }
+          });
           reject(error);
-        };
+        });
+
+        this.socket.on('disconnect', (reason) => {
+          this.isConnecting = false;
+          console.log('Socket.IO disconnected:', reason);
+          this.emit('connection_lost', { reason });
+
+          if (reason === 'io server disconnect') {
+            // Server disconnected, try to reconnect
+            this.handleReconnect();
+          }
+        });
+
+        // Set up message listeners
+        this.setupMessageListeners();
 
       } catch (error) {
         this.isConnecting = false;
+        console.error('Failed to initialize Socket.IO connection:', error);
         reject(error);
       }
     });
   }
 
+  private setupMessageListeners() {
+    if (!this.socket) return;
+
+    // Forward all server messages to our event handlers
+    const messageTypes = [
+      'new_message', 'user_joined', 'user_left', 'online_users',
+      'typing_update', 'message_reaction', 'message_edited',
+      'message_deleted', 'message_read', 'user_status_changed',
+      'voice_control_changed', 'emoji_reaction_received'
+    ];
+
+    messageTypes.forEach(type => {
+      this.socket!.on(type, (data) => {
+        this.emit(type, data);
+      });
+    });
+  }
+
   disconnect() {
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
     }
     this.reconnectAttempts = this.maxReconnectAttempts; // Prevent reconnection
   }
@@ -129,9 +175,11 @@ class WebSocketService {
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
 
     setTimeout(() => {
-      this.connect(this.currentUserId, this.currentUsername).catch(() => {
-        // Reconnection failed, will try again
-      });
+      if (this.currentUserId && this.currentUsername) {
+        this.connect(this.currentUserId, this.currentUsername).catch(() => {
+          // Reconnection failed, will try again
+        });
+      }
     }, delay);
   }
 
@@ -162,125 +210,111 @@ class WebSocketService {
 
   // Group operations
   joinGroup(groupId: string) {
-    this.send({
-      type: 'join_group',
-      payload: {},
-      groupId,
-      userId: this.currentUserId,
-      username: this.currentUsername,
-      timestamp: Date.now()
-    });
+    if (this.socket?.connected) {
+      this.socket.emit('join_group', { groupId });
+    } else {
+      console.warn('Socket.IO not connected. Cannot join group:', groupId);
+    }
   }
 
   leaveGroup(groupId: string) {
-    this.send({
-      type: 'leave_group',
-      payload: {},
-      groupId,
-      userId: this.currentUserId,
-      username: this.currentUsername,
-      timestamp: Date.now()
-    });
+    if (this.socket?.connected) {
+      this.socket.emit('leave_group', { groupId });
+    } else {
+      console.warn('Socket.IO not connected. Cannot leave group:', groupId);
+    }
   }
 
   // Messaging
   sendMessage(groupId: string, content: string, type: 'text' | 'image' | 'file' = 'text', senderAvatar: string = '', replyTo?: any) {
-    this.send({
-      type: 'message',
-      payload: {
+    if (this.socket?.connected) {
+      this.socket.emit('send_message', {
+        groupId,
         content,
         type,
         senderAvatar,
         replyTo
-      },
-      groupId,
-      userId: this.currentUserId,
-      username: this.currentUsername,
-      timestamp: Date.now()
-    });
+      });
+    } else {
+      console.warn('Socket.IO not connected. Message not sent:', { groupId, content });
+    }
   }
 
   // Typing indicators
   startTyping(groupId: string) {
-    this.send({
-      type: 'typing_start',
-      payload: {},
-      groupId,
-      userId: this.currentUserId,
-      username: this.currentUsername,
-      timestamp: Date.now()
-    });
+    if (this.socket?.connected) {
+      this.socket.emit('typing_start', { groupId });
+    }
   }
 
   stopTyping(groupId: string) {
-    this.send({
-      type: 'typing_stop',
-      payload: {},
-      groupId,
-      userId: this.currentUserId,
-      username: this.currentUsername,
-      timestamp: Date.now()
-    });
+    if (this.socket?.connected) {
+      this.socket.emit('typing_stop', { groupId });
+    }
   }
 
   // Reactions
   addReaction(groupId: string, messageId: string, emoji: string) {
-    this.send({
-      type: 'reaction',
-      payload: {
-        messageId,
-        emoji,
-        action: 'add'
-      },
-      groupId,
-      userId: this.currentUserId,
-      username: this.currentUsername,
-      timestamp: Date.now()
-    });
+    if (this.socket?.connected) {
+      this.socket.emit('add_reaction', { groupId, messageId, emoji });
+    }
   }
 
   removeReaction(groupId: string, messageId: string, emoji: string) {
-    this.send({
-      type: 'reaction',
-      payload: {
-        messageId,
-        emoji,
-        action: 'remove'
-      },
-      groupId,
-      userId: this.currentUserId,
-      username: this.currentUsername,
-      timestamp: Date.now()
-    });
+    if (this.socket?.connected) {
+      this.socket.emit('remove_reaction', { groupId, messageId, emoji });
+    }
   }
 
-  private send(message: any) {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(message));
+  // Message editing
+  editMessage(groupId: string, messageId: string, content: string) {
+    if (this.socket?.connected) {
+      this.socket.emit('edit_message', { groupId, messageId, content });
+    }
+  }
+
+  // Message deletion
+  deleteMessage(groupId: string, messageId: string) {
+    if (this.socket?.connected) {
+      this.socket.emit('delete_message', { groupId, messageId });
+    }
+  }
+
+  // Read receipts
+  markAsRead(groupId: string, messageId: string) {
+    if (this.socket?.connected) {
+      this.socket.emit('mark_read', { groupId, messageId });
+    }
+  }
+
+  // Voice controls
+  sendVoiceControl(groupId: string, action: 'mute' | 'unmute' | 'deafen' | 'undeafen', targetUserId: string) {
+    if (this.socket?.connected) {
+      this.socket.emit('voice_control', { groupId, action, targetUserId });
     } else {
-      console.warn('WebSocket not connected. Message not sent:', message);
+      console.warn('Socket.IO not connected. Voice control not sent:', { groupId, action, targetUserId });
+    }
+  }
+
+  // Emoji reactions
+  sendEmojiReaction(groupId: string, emoji: string, seatPosition: number) {
+    if (this.socket?.connected) {
+      this.socket.emit('emoji_reaction', { groupId, emoji, seatPosition });
+    } else {
+      console.warn('Socket.IO not connected. Emoji reaction not sent:', { groupId, emoji, seatPosition });
     }
   }
 
   isConnected(): boolean {
-    return this.ws?.readyState === WebSocket.OPEN;
+    return this.socket?.connected || false;
   }
 
   getConnectionState(): string {
-    if (!this.ws) return 'disconnected';
-    
-    switch (this.ws.readyState) {
-      case WebSocket.CONNECTING:
-        return 'connecting';
-      case WebSocket.OPEN:
-        return 'connected';
-      case WebSocket.CLOSING:
-        return 'closing';
-      case WebSocket.CLOSED:
-        return 'disconnected';
-      default:
-        return 'unknown';
-    }
+    if (!this.socket) return 'disconnected';
+
+    if (this.socket.connected) return 'connected';
+    if (this.socket.disconnected) return 'disconnected';
+    return 'connecting';
   }
 }
 

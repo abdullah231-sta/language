@@ -6,6 +6,7 @@ import { useNotifications } from '@/context/NotificationContext';
 import { useRealTimeChat } from '@/context/RealTimeChatContext';
 import { MobileInput, MobileButton } from './MobileOptimized';
 import { ConnectionStatus } from './ConnectionStatus';
+import React from 'react';
 import { 
   FaPaperPlane, 
   FaSmile, 
@@ -569,4 +570,4 @@ const GroupChat: React.FC<GroupChatProps> = ({
   );
 };
 
-export default GroupChat;
+export default React.memo(GroupChat);

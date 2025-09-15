@@ -7,35 +7,35 @@ import { useRealTimeChat } from '@/context/RealTimeChatContext';
 interface ConnectionStatusProps {
   className?: string;
   showChatStatus?: boolean;
+  wsConnected?: boolean;
+  reconnecting?: boolean;
 }
 
 export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ 
   className = '',
-  showChatStatus = false
+  showChatStatus = false,
+  wsConnected,
+  reconnecting
 }) => {
   const { isOnline, isConnecting } = useNetworkStatus();
   const { isConnected: chatConnected, connectionStatus } = useRealTimeChat();
 
+  // Use provided WebSocket status if available, otherwise use context
+  const actualWsConnected = wsConnected !== undefined ? wsConnected : chatConnected;
+  const actualReconnecting = reconnecting !== undefined ? reconnecting : connectionStatus === 'connecting';
+
   // Show chat status if requested
   if (showChatStatus) {
     const getStatusColor = () => {
-      switch (connectionStatus) {
-        case 'connected': return 'bg-green-500';
-        case 'connecting': return 'bg-yellow-500 animate-pulse';
-        case 'disconnected': return 'bg-red-500';
-        case 'error': return 'bg-red-600 animate-bounce';
-        default: return 'bg-gray-500';
-      }
+      if (actualReconnecting) return 'bg-yellow-500 animate-pulse';
+      if (actualWsConnected) return 'bg-green-500';
+      return 'bg-red-500';
     };
 
     const getStatusText = () => {
-      switch (connectionStatus) {
-        case 'connected': return 'Chat Connected';
-        case 'connecting': return 'Connecting to Chat...';
-        case 'disconnected': return 'Chat Disconnected';
-        case 'error': return 'Chat Connection Error';
-        default: return 'Chat Status Unknown';
-      }
+      if (actualReconnecting) return 'WebSocket Connecting...';
+      if (actualWsConnected) return 'WebSocket Connected';
+      return 'WebSocket Disconnected';
     };
 
     return (
@@ -44,7 +44,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
         <span className="text-gray-300">
           {getStatusText()}
         </span>
-        {connectionStatus === 'error' && (
+        {!actualWsConnected && !actualReconnecting && (
           <button 
             onClick={() => window.location.reload()}
             className="ml-2 text-xs text-blue-400 hover:text-blue-300 underline"

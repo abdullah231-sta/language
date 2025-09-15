@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1 --port 3000",
+    "dev:full": "concurrently \"npm run dev\" \"npm run socket-server\"",
+    "socket-server": "node socket-server.js",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint"
@@ -26,13 +28,17 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@next/bundle-analyzer": "^15.5.3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "babel-plugin-transform-remove-console": "^6.9.4",
+    "concurrently": "^8.2.2",
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
     "prisma": "^6.16.1",
+    "react-devtools": "^6.1.5",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

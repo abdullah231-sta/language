@@ -3,12 +3,9 @@ import { supabase } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('POST /api/groups/join called');
     const body = await request.json();
-    console.log('Join group request body:', JSON.stringify(body, null, 2));
     
     const { userId, groupId, action = 'join' } = body;
-    console.log('Extracted values:', { userId, groupId, action });
 
     // Validate required fields
     if (!userId || !groupId) {
@@ -76,8 +73,6 @@ export async function POST(request: NextRequest) {
           // Continue anyway, as user might already exist
         }
       }
-      
-      console.log('Using demo user:', user.username);
     } else {
       // For real users, validate they exist in the database
       const { data: dbUser, error: userError } = await supabase
@@ -163,8 +158,6 @@ export async function POST(request: NextRequest) {
         console.error('Join group error:', joinError);
         throw joinError;
       }
-
-      console.log(`User ${user.username} joined group ${group.name}`);
       
       return NextResponse.json({
         success: true,
@@ -212,8 +205,6 @@ export async function POST(request: NextRequest) {
         console.error('Leave group error:', leaveError);
         throw leaveError;
       }
-
-      console.log(`User ${user.username} left group ${group.name}`);
       
       return NextResponse.json({
         success: true,

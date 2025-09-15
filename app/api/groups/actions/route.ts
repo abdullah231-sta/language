@@ -3,9 +3,7 @@ import { supabase } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('POST /api/groups/actions called');
     const body = await request.json();
-    console.log('Group action request:', JSON.stringify(body, null, 2));
     
     const { action, groupId, userId, targetUserId, seatPosition, role, requesterId } = body;
 

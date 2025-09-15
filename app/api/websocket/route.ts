@@ -3,9 +3,10 @@ import { NextRequest } from 'next/server';
 import { WebSocketServer } from 'ws';
 
 interface WebSocketMessage {
-  type: 'message' | 'typing_start' | 'typing_stop' | 'reaction' | 'join_group' | 'leave_group';
+  type: 'message' | 'typing_start' | 'typing_stop' | 'reaction' | 'join_group' | 'leave_group' | 'message_edit' | 'message_delete' | 'mark_read' | 'user_online' | 'user_offline';
   payload: any;
-  groupId: string;
+  groupId?: string;
+  conversationId?: string;
   userId: string;
   username: string;
   timestamp: number;
@@ -78,27 +79,47 @@ class WebSocketManager {
 
     switch (message.type) {
       case 'join_group':
-        this.handleJoinGroup(clientId, message.groupId);
+        if (message.groupId) this.handleJoinGroup(clientId, message.groupId);
         break;
       
       case 'leave_group':
-        this.handleLeaveGroup(clientId, message.groupId);
+        if (message.groupId) this.handleLeaveGroup(clientId, message.groupId);
         break;
       
       case 'message':
         this.handleChatMessage(clientId, message);
         break;
       
+      case 'message_edit':
+        this.handleMessageEdit(clientId, message);
+        break;
+      
+      case 'message_delete':
+        this.handleMessageDelete(clientId, message);
+        break;
+      
+      case 'mark_read':
+        this.handleMarkAsRead(clientId, message);
+        break;
+      
       case 'typing_start':
-        this.handleTypingStart(clientId, message.groupId);
+        if (message.groupId) this.handleTypingStart(clientId, message.groupId);
         break;
       
       case 'typing_stop':
-        this.handleTypingStop(clientId, message.groupId);
+        if (message.groupId) this.handleTypingStop(clientId, message.groupId);
         break;
       
       case 'reaction':
         this.handleReaction(clientId, message);
+        break;
+      
+      case 'user_online':
+        this.handleUserOnline(clientId, message);
+        break;
+      
+      case 'user_offline':
+        this.handleUserOffline(clientId, message);
         break;
     }
   }
@@ -192,22 +213,153 @@ class WebSocketManager {
     this.broadcastTypingUpdate(groupId);
   }
 
-  private handleTypingStop(clientId: string, groupId: string) {
-    this.typingUsers.get(groupId)?.delete(clientId);
-    this.broadcastTypingUpdate(groupId);
-  }
-
   private handleReaction(clientId: string, message: WebSocketMessage) {
     const client = this.clients.get(clientId);
-    if (!client || !client.groupId) return;
+    if (!client) return;
 
-    this.broadcastToGroup(client.groupId, {
-      type: 'message_reaction',
+    const targetGroupId = message.groupId || message.payload.groupId;
+    const targetConversationId = message.conversationId || message.payload.conversationId;
+
+    if (targetGroupId) {
+      this.broadcastToGroup(targetGroupId, {
+        type: 'message_reaction',
+        payload: {
+          messageId: message.payload.messageId,
+          emoji: message.payload.emoji,
+          userId: client.userId,
+          action: message.payload.action // 'add' or 'remove'
+        },
+        timestamp: Date.now()
+      });
+    } else if (targetConversationId) {
+      this.broadcastToConversation(targetConversationId, {
+        type: 'message_reaction',
+        payload: {
+          messageId: message.payload.messageId,
+          emoji: message.payload.emoji,
+          userId: client.userId,
+          action: message.payload.action // 'add' or 'remove'
+        },
+        timestamp: Date.now()
+      }, clientId);
+    }
+  }
+
+  private handleMessageEdit(clientId: string, message: WebSocketMessage) {
+    const client = this.clients.get(clientId);
+    if (!client) return;
+
+    const targetGroupId = message.groupId || message.payload.groupId;
+    const targetConversationId = message.conversationId || message.payload.conversationId;
+
+    if (targetGroupId) {
+      this.broadcastToGroup(targetGroupId, {
+        type: 'message_edited',
+        payload: {
+          messageId: message.payload.messageId,
+          newContent: message.payload.content,
+          editedAt: Date.now()
+        },
+        timestamp: Date.now()
+      });
+    } else if (targetConversationId) {
+      this.broadcastToConversation(targetConversationId, {
+        type: 'message_edited',
+        payload: {
+          messageId: message.payload.messageId,
+          newContent: message.payload.content,
+          editedAt: Date.now()
+        },
+        timestamp: Date.now()
+      }, clientId);
+    }
+  }
+
+  private handleMessageDelete(clientId: string, message: WebSocketMessage) {
+    const client = this.clients.get(clientId);
+    if (!client) return;
+
+    const targetGroupId = message.groupId || message.payload.groupId;
+    const targetConversationId = message.conversationId || message.payload.conversationId;
+
+    if (targetGroupId) {
+      this.broadcastToGroup(targetGroupId, {
+        type: 'message_deleted',
+        payload: {
+          messageId: message.payload.messageId,
+          deletedAt: Date.now()
+        },
+        timestamp: Date.now()
+      });
+    } else if (targetConversationId) {
+      this.broadcastToConversation(targetConversationId, {
+        type: 'message_deleted',
+        payload: {
+          messageId: message.payload.messageId,
+          deletedAt: Date.now()
+        },
+        timestamp: Date.now()
+      }, clientId);
+    }
+  }
+
+  private handleMarkAsRead(clientId: string, message: WebSocketMessage) {
+    const client = this.clients.get(clientId);
+    if (!client) return;
+
+    const targetGroupId = message.groupId || message.payload.groupId;
+    const targetConversationId = message.conversationId || message.payload.conversationId;
+
+    if (targetGroupId) {
+      this.broadcastToGroup(targetGroupId, {
+        type: 'message_read',
+        payload: {
+          messageId: message.payload.messageId,
+          userId: client.userId,
+          readAt: Date.now()
+        },
+        timestamp: Date.now()
+      });
+    } else if (targetConversationId) {
+      this.broadcastToConversation(targetConversationId, {
+        type: 'message_read',
+        payload: {
+          messageId: message.payload.messageId,
+          userId: client.userId,
+          readAt: Date.now()
+        },
+        timestamp: Date.now()
+      }, clientId);
+    }
+  }
+
+  private handleUserOnline(clientId: string, message: WebSocketMessage) {
+    const client = this.clients.get(clientId);
+    if (!client) return;
+
+    // Broadcast user online status
+    this.broadcastToAll({
+      type: 'user_status_changed',
       payload: {
-        messageId: message.payload.messageId,
-        emoji: message.payload.emoji,
         userId: client.userId,
-        action: message.payload.action // 'add' or 'remove'
+        username: client.username,
+        status: 'online'
+      },
+      timestamp: Date.now()
+    });
+  }
+
+  private handleUserOffline(clientId: string, message: WebSocketMessage) {
+    const client = this.clients.get(clientId);
+    if (!client) return;
+
+    // Broadcast user offline status
+    this.broadcastToAll({
+      type: 'user_status_changed',
+      payload: {
+        userId: client.userId,
+        username: client.username,
+        status: 'offline'
       },
       timestamp: Date.now()
     });
@@ -250,6 +402,17 @@ class WebSocketManager {
     });
   }
 
+  private broadcastToConversation(conversationId: string, message: any, excludeClientId?: string) {
+    // For conversations, we need to find all clients that are in this conversation
+    // This is a simplified implementation - in a real app, you'd track conversation memberships
+    this.clients.forEach((client, clientId) => {
+      if (clientId === excludeClientId) return;
+      if (client.ws.readyState === 1) { // WebSocket.OPEN
+        client.ws.send(JSON.stringify(message));
+      }
+    });
+  }
+
   private getGroupOnlineUsers(groupId: string): Array<{userId: string, username: string}> {
     const groupMembers = this.groupMembers.get(groupId);
     if (!groupMembers) return [];
@@ -260,6 +423,15 @@ class WebSocketManager {
         return client ? { userId: client.userId, username: client.username } : null;
       })
       .filter(Boolean) as Array<{userId: string, username: string}>;
+  }
+
+  private broadcastToAll(message: any, excludeClientId?: string) {
+    this.clients.forEach((client, clientId) => {
+      if (clientId === excludeClientId) return;
+      if (client.ws.readyState === 1) { // WebSocket.OPEN
+        client.ws.send(JSON.stringify(message));
+      }
+    });
   }
 }
 

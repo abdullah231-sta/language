@@ -25,14 +25,7 @@ export async function GET(request: NextRequest) {
         userId,
         participantId,
         createdAt,
-        updatedAt,
-        participant:users!conversations_participantId_fkey(id, username, email),
-        messages(
-          id,
-          content,
-          senderId,
-          createdAt
-        )
+        updatedAt
       `)
       .eq('userId', userId)
       .order('updatedAt', { ascending: false });
@@ -140,8 +133,7 @@ export async function POST(request: NextRequest) {
         userId,
         participantId,
         createdAt,
-        updatedAt,
-        participant:users!conversations_participantId_fkey(id, username, email)
+        updatedAt
       `)
       .single();
 

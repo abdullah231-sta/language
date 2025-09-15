@@ -82,8 +82,6 @@ const GroupCard = memo(({ id, name, language, memberCount, description, isJoined
         action: 'join'
       };
       
-      console.log('Sending join request:', requestBody);
-      
       const response = await fetch('/api/groups/join', {
         method: 'POST',
         headers: {

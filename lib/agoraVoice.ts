@@ -5,6 +5,7 @@ import AgoraRTC, {
   ILocalAudioTrack,
   IRemoteAudioTrack
 } from 'agora-rtc-sdk-ng';
+import { useMemo } from 'react';
 
 export interface VoiceState {
   isConnected: boolean;
@@ -36,7 +37,6 @@ export class AgoraVoiceService {
     try {
       // Check if already connected to this channel
       if (this.currentChannel === channelName && this.client && this.client.connectionState === 'CONNECTED') {
-        console.log('Already connected to channel:', channelName);
         return;
       }
 
@@ -51,21 +51,17 @@ export class AgoraVoiceService {
         
         // Add debugging event listeners
         this.client.on('user-published', async (user, mediaType) => {
-          console.log('🎵 User published audio:', user.uid, mediaType);
           if (mediaType === 'audio') {
             await this.client!.subscribe(user, mediaType);
-            console.log('✅ Subscribed to user audio:', user.uid);
             const remoteAudioTrack = user.audioTrack;
             if (remoteAudioTrack) {
               remoteAudioTrack.play();
               this.remoteAudioTracks.set(user.uid.toString(), remoteAudioTrack);
-              console.log('🔊 Playing remote audio from:', user.uid);
             }
           }
         });
 
         this.client.on('user-unpublished', (user, mediaType) => {
-          console.log('🔇 User unpublished:', user.uid, mediaType);
           if (mediaType === 'audio') {
             this.remoteAudioTracks.delete(user.uid.toString());
           }
@@ -77,8 +73,6 @@ export class AgoraVoiceService {
         // Voice activity detection
         this.client.on('volume-indicator', (volumes) => {
           if (this.speakingDetectionCallback) {
-            console.log('Volume indicator data:', volumes.map((v: any) => ({ uid: v.uid, level: v.level, speaking: v.level > 5 })));
-            
             // Track all participants to ensure we report non-speaking users as well
             const reportedUsers = new Set();
             
@@ -106,13 +100,11 @@ export class AgoraVoiceService {
 
       // If client is in connecting state, wait for it to finish or error
       if (this.client.connectionState === 'CONNECTING') {
-        console.log('Client is already connecting, please wait...');
         throw new Error('Connection already in progress. Please wait and try again.');
       }
 
       // If client is connected but to different channel, disconnect first
       if (this.client.connectionState === 'CONNECTED') {
-        console.log('Disconnecting from current channel before joining new one...');
         await this.client.leave();
       }
 
@@ -135,9 +127,7 @@ export class AgoraVoiceService {
       const { token } = await tokenResponse.json();
       
       // Join the channel with the token
-      console.log('🔗 Joining channel:', channelName, 'as user:', userId);
       await this.client.join(this.appId, channelName, token, userId);
-      console.log('✅ Successfully joined channel');
       
       // Store current channel and user ID
       this.currentChannel = channelName;
@@ -146,14 +136,14 @@ export class AgoraVoiceService {
       // Create and publish audio track
       console.log('🎤 Creating microphone audio track...');
       this.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-      console.log('📡 Publishing audio track...');
+      console.log('🎤 Audio track created:', this.localAudioTrack);
+      
+      console.log('🎤 Publishing audio track...');
       await this.client.publish([this.localAudioTrack]);
-      console.log('✅ Audio track published successfully');
+      console.log('🎤 Audio track published successfully');
 
       this.currentChannel = channelName;
       this.currentUserId = userId;
-
-      console.log('🎉 Successfully joined voice channel:', channelName);
     } catch (error) {
       console.error('❌ Failed to join voice channel:', error);
       
@@ -197,8 +187,6 @@ export class AgoraVoiceService {
       // Reset state
       this.currentChannel = null;
       this.currentUserId = null;
-      
-      console.log('Successfully left voice channel');
     } catch (error) {
       console.error('Failed to leave voice channel:', error);
       
@@ -216,11 +204,39 @@ export class AgoraVoiceService {
 
   async toggleMute(): Promise<boolean> {
     try {
+      console.log('🎤 AgoraVoiceService.toggleMute called');
+      console.log('🎤 Current localAudioTrack:', this.localAudioTrack);
+      console.log('🎤 Is connected:', this.isConnected());
+      
       if (this.localAudioTrack) {
-        await this.localAudioTrack.setMuted(!this.localAudioTrack.muted);
-        return this.localAudioTrack.muted;
+        const currentMuted = this.localAudioTrack.muted;
+        console.log('🎤 Current muted state:', currentMuted);
+        
+        // Option 1: Standard mute (keeps microphone connected)
+        await this.localAudioTrack.setMuted(!currentMuted);
+        const newMutedState = this.localAudioTrack.muted;
+        console.log('🎤 New muted state:', newMutedState);
+        return newMutedState;
+
+        // Option 2: Complete disconnect (uncomment to use)
+        // if (this.localAudioTrack.muted) {
+        //   // Currently muted, unmute by recreating track
+        //   this.localAudioTrack.close();
+        //   this.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+        //   if (this.client) {
+        //     await this.client.publish([this.localAudioTrack]);
+        //   }
+        //   return false; // Now unmuted
+        // } else {
+        //   // Currently unmuted, mute by closing track
+        //   this.localAudioTrack.close();
+        //   this.localAudioTrack = null;
+        //   return true; // Now muted
+        // }
+      } else {
+        console.error('🎤 No local audio track available');
+        throw new Error('No audio track available. Please check microphone permissions and voice connection.');
       }
-      return false;
     } catch (error) {
       console.error('Failed to toggle mute:', error);
       throw error;
@@ -248,7 +264,6 @@ export class AgoraVoiceService {
       } else {
         remoteTrack.play();
       }
-      console.log(`${muted ? 'Muted' : 'Unmuted'} remote user:`, userId);
     }
   }
 
@@ -257,7 +272,6 @@ export class AgoraVoiceService {
     const remoteTrack = this.remoteAudioTracks.get(userId);
     if (remoteTrack) {
       remoteTrack.setVolume(volume);
-      console.log(`Set volume for user ${userId} to ${volume}`);
     }
   }
 
@@ -275,7 +289,6 @@ export class AgoraVoiceService {
   onUserJoined(callback: (userId: string) => void): void {
     if (this.client) {
       this.client.on('user-joined', (user: any) => {
-        console.log('👋 User joined voice channel:', user.uid);
         callback(user.uid.toString());
       });
     }
@@ -284,7 +297,6 @@ export class AgoraVoiceService {
   onUserLeft(callback: (userId: string) => void): void {
     if (this.client) {
       this.client.on('user-left', (user: any) => {
-        console.log('👋 User left voice channel:', user.uid);
         callback(user.uid.toString());
       });
     }

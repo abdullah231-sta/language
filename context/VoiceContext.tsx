@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
 import { agoraVoiceService, VoiceState } from '@/lib/agoraVoice';
 
 interface VoiceContextType {
@@ -55,7 +55,6 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
 
       // Set up speaking detection
       agoraVoiceService.setSpeakingDetectionCallback((userId, isSpeaking) => {
-        console.log('Speaking detection:', { userId, isSpeaking });
         setVoiceState(prev => {
           const newSpeakingUsers = new Set(prev.speakingUsers);
           if (isSpeaking) {
@@ -63,7 +62,6 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
           } else {
             newSpeakingUsers.delete(userId);
           }
-          console.log('Updated speakingUsers:', Array.from(newSpeakingUsers));
           return {
             ...prev,
             speakingUsers: newSpeakingUsers
@@ -112,12 +110,18 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   }, [isVoiceEnabled]);
 
   const toggleMute = useCallback(async () => {
-    if (!isVoiceEnabled) return;
+    if (!isVoiceEnabled) {
+      console.warn('🎤 Voice not enabled');
+      return;
+    }
     
     try {
+      console.log('🎤 VoiceContext.toggleMute called');
       const newMutedState = await agoraVoiceService.toggleMute();
+      console.log('🎤 VoiceContext setting muted state to:', newMutedState);
       setVoiceState(prev => ({ ...prev, isMuted: newMutedState }));
     } catch (error) {
+      console.error('🎤 VoiceContext toggleMute error:', error);
       setVoiceState(prev => ({
         ...prev,
         error: error instanceof Error ? error.message : 'Failed to toggle mute'
@@ -163,14 +167,15 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     
     try {
       if (isAtTable && !voiceState.isConnected) {
-        console.log('🪑 User sat at table, auto-joining voice...');
         await joinVoiceChannel(`group_${groupId}`, userId);
       } else if (!isAtTable && voiceState.isConnected) {
-        console.log('🚶 User left table, leaving voice...');
         await leaveVoiceChannel();
       }
     } catch (error) {
-      console.error('Auto-join voice failed:', error);
+      setVoiceState(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : 'Auto-join voice failed'
+      }));
     }
   }, [isVoiceEnabled, voiceState.isConnected, joinVoiceChannel, leaveVoiceChannel]);
 
@@ -183,17 +188,19 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     };
   }, []); // Empty dependency array - only run on mount/unmount
 
+  const contextValue = useMemo(() => ({
+    voiceState,
+    joinVoiceChannel,
+    leaveVoiceChannel,
+    toggleMute,
+    muteRemoteUser,
+    setRemoteUserVolume,
+    autoJoinForTableUser,
+    isVoiceEnabled
+  }), [voiceState, joinVoiceChannel, leaveVoiceChannel, toggleMute, muteRemoteUser, setRemoteUserVolume, autoJoinForTableUser, isVoiceEnabled]);
+
   return (
-    <VoiceContext.Provider value={{
-      voiceState,
-      joinVoiceChannel,
-      leaveVoiceChannel,
-      toggleMute,
-      muteRemoteUser,
-      setRemoteUserVolume,
-      autoJoinForTableUser,
-      isVoiceEnabled
-    }}>
+    <VoiceContext.Provider value={contextValue}>
       {children}
     </VoiceContext.Provider>
   );

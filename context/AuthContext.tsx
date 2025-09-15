@@ -15,6 +15,9 @@ interface User {
   level: 'Beginner' | 'Intermediate' | 'Advanced';
   joinedAt: Date;
   isOnline: boolean;
+  bio?: string;
+  displayLanguage?: string;
+  automaticTranslation?: boolean;
 }
 
 interface AuthContextType {
@@ -66,7 +69,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               targetLanguages: ['Spanish', 'French'],
               level: 'Intermediate' as const,
               joinedAt: new Date('2024-01-15'),
-              isOnline: false
+              isOnline: false,
+              bio: 'I love learning languages and connecting with people from different cultures!',
+              displayLanguage: 'English',
+              automaticTranslation: true
             },
             {
               id: 'demo-user-2',
@@ -81,7 +87,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               targetLanguages: ['English', 'German'],
               level: 'Advanced' as const,
               joinedAt: new Date('2024-02-20'),
-              isOnline: false
+              isOnline: false,
+              bio: 'Passionate about language exchange and cultural understanding.',
+              displayLanguage: 'English',
+              automaticTranslation: false
             }
           ];
           localStorage.setItem('languageAppUsers', JSON.stringify(demoUsers));

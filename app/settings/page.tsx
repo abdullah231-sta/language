@@ -2,285 +2,332 @@
 
 "use client";
 
-import { useRef, ChangeEvent, useState } from 'react';
-import { useUser } from '@/context/UserContext';
+import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import PasswordModal from '@/components/modals/PasswordModal';
 import DeleteModal from '@/components/modals/DeleteModal';
 import { 
-  FaUserCircle, 
-  FaLanguage, 
   FaPalette, 
   FaSignOutAlt, 
   FaEnvelope, 
   FaLock, 
   FaSave,
-  FaExclamationTriangle
+  FaExclamationTriangle,
+  FaEdit,
+  FaTimes,
+  FaGlobe
 } from 'react-icons/fa';
 
 const SettingsPage = () => {
-  // Get data and functions from the context
-  const { 
-    username, 
-    avatar, 
-    nativeLanguage, 
-    targetLanguage, 
-    nationality,
-    setUsername, 
-    setAvatar,
-    setNativeLanguage,
-    setTargetLanguage,
-    setNationality
-  } = useUser();
-  
-  const { showSuccess, showError, showInfo } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user, updateProfile, isLoading } = useAuth();
+  const { showSuccess, showError } = useToast();
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    displayLanguage: user?.displayLanguage || 'English',
+    automaticTranslation: user?.automaticTranslation ?? true
+  });
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [success, setSuccess] = useState('');
   const [isPasswordModalOpen, setPasswordModalOpen] = useState(false);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        showError('Please select a valid image file');
-        return;
-      }
-      
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        showError('Image file size must be less than 5MB');
-        return;
-      }
-      
-      setAvatar(URL.createObjectURL(file));
-      showSuccess('Profile picture updated!');
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    const checked = type === 'checkbox' ? (e.target as HTMLInputElement).checked : undefined;
+    
+    setFormData({
+      ...formData,
+      [name]: type === 'checkbox' ? checked : value
+    });
+    
+    // Clear errors when user starts typing
+    if (errors[name]) {
+      setErrors({
+        ...errors,
+        [name]: ''
+      });
     }
   };
 
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
+  const handleEditStart = () => {
+    setIsEditing(true);
+    setFormData({
+      displayLanguage: user?.displayLanguage || 'English',
+      automaticTranslation: user?.automaticTranslation ?? true
+    });
+    setErrors({});
+    setSuccess('');
   };
-  
-  const handleSaveChanges = async () => {
-    setIsSaving(true);
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      showSuccess('Settings saved successfully!');
-    } catch (error) {
-      showError('Failed to save settings. Please try again.');
-    } finally {
-      setIsSaving(false);
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setErrors({});
+    setSuccess('');
+  };
+
+  const validateForm = () => {
+    const newErrors: {[key: string]: string} = {};
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    const updates = {
+      displayLanguage: formData.displayLanguage,
+      automaticTranslation: formData.automaticTranslation
+    };
+
+    const result = await updateProfile(updates);
+
+    if (result.success) {
+      setSuccess('Settings updated successfully!');
+      setIsEditing(false);
+      setTimeout(() => setSuccess(''), 3000);
+    } else {
+      setErrors({ general: result.error || 'Failed to update settings' });
     }
   };
-  
+
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      showInfo('Logging out...');
+      showSuccess('Logging out...');
       // Simulate logout delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       // Add actual logout logic here
       showSuccess('Logged out successfully!');
-    } catch (error) {
+    } catch {
       showError('Failed to logout. Please try again.');
     } finally {
       setIsLoggingOut(false);
     }
   };
-  
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-white mb-4">Please log in to view settings</h2>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
-      <div className="p-4 sm:p-8 bg-gray-50 min-h-screen">
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">Settings</h1>
-        <div className="space-y-12">
-
-          {/* === 1. PROFILE SETTINGS === */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-6 flex items-center"><FaUserCircle className="mr-3 text-blue-500" /> Profile Settings</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-              <div className="flex flex-col items-center md:items-start">
-                <label className="block text-gray-700 font-medium mb-2">Profile Picture</label>
-                <input type="file" ref={fileInputRef} onChange={handleImageChange} className="hidden" accept="image/png, image/jpeg" />
-                {avatar ? (
-                  <img src={avatar} alt="Avatar Preview" className="w-24 h-24 rounded-full object-cover mb-2" />
-                ) : (
-                  <div className="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center font-bold text-white text-4xl mb-2">{username.charAt(0).toUpperCase()}</div>
-                )}
-                <button onClick={handleUploadClick} className="text-sm text-blue-600 hover:underline">Upload Image</button>
-              </div>
-              <div className="md:col-span-2 space-y-4">
-                <div>
-                  <label className="block text-gray-700 font-medium">Username</label>
-                  <input type="text" className="w-full p-2 border rounded mt-1 text-gray-900" value={username} onChange={(e) => setUsername(e.target.value)} />
-                </div>
-                <div>
-                  <label className="block text-gray-700 font-medium">Bio</label>
-                  <textarea className="w-full p-2 border rounded mt-1 h-24 text-gray-900" placeholder="Tell us about yourself..."></textarea>
-                </div>
-              </div>
-            </div>
+      <div className="min-h-screen bg-gray-900 p-4 sm:p-6 lg:p-8">
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
+            <p className="text-gray-400">Manage your account preferences and application settings</p>
           </div>
 
-          {/* === 2. LANGUAGE & TRANSLATION (RESTORED) === */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-6 flex items-center"><FaLanguage className="mr-3 text-green-500" /> Language & Translation</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-gray-700 font-medium">My Native Language</label>
-                <select 
-                  className="w-full p-2 border rounded mt-1 text-gray-900"
-                  value={nativeLanguage}
-                  onChange={(e) => setNativeLanguage(e.target.value)}
-                >
-                  <option value="English">English</option>
-                  <option value="Arabic">Arabic (العربية)</option>
-                  <option value="Spanish">Spanish (Español)</option>
-                  <option value="French">French (Français)</option>
-                  <option value="German">German (Deutsch)</option>
-                  <option value="Chinese">Chinese (中文)</option>
-                  <option value="Japanese">Japanese (日本語)</option>
-                  <option value="Korean">Korean (한국어)</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-gray-700 font-medium">Target Language</label>
-                <select 
-                  className="w-full p-2 border rounded mt-1 text-gray-900"
-                  value={targetLanguage}
-                  onChange={(e) => setTargetLanguage(e.target.value)}
-                >
-                  <option value="English">English</option>
-                  <option value="Arabic">Arabic (العربية)</option>
-                  <option value="Spanish">Spanish (Español)</option>
-                  <option value="French">French (Français)</option>
-                  <option value="German">German (Deutsch)</option>
-                  <option value="Chinese">Chinese (中文)</option>
-                  <option value="Japanese">Japanese (日本語)</option>
-                  <option value="Korean">Korean (한국어)</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-gray-700 font-medium">Nationality</label>
-                <select 
-                  className="w-full p-2 border rounded mt-1 text-gray-900"
-                  value={nationality}
-                  onChange={(e) => setNationality(e.target.value)}
-                >
-                  <option value="US">🇺🇸 United States</option>
-                  <option value="GB">🇬🇧 United Kingdom</option>
-                  <option value="SA">🇸🇦 Saudi Arabia</option>
-                  <option value="AE">🇦🇪 United Arab Emirates</option>
-                  <option value="EG">🇪🇬 Egypt</option>
-                  <option value="ES">🇪🇸 Spain</option>
-                  <option value="MX">🇲🇽 Mexico</option>
-                  <option value="FR">🇫🇷 France</option>
-                  <option value="DE">🇩🇪 Germany</option>
-                  <option value="CN">🇨🇳 China</option>
-                  <option value="JP">🇯🇵 Japan</option>
-                  <option value="KR">🇰🇷 South Korea</option>
-                  <option value="IN">🇮🇳 India</option>
-                  <option value="BR">🇧🇷 Brazil</option>
-                  <option value="CA">🇨🇦 Canada</option>
-                  <option value="AU">🇦🇺 Australia</option>
-                  <option value="IT">🇮🇹 Italy</option>
-                  <option value="RU">🇷🇺 Russia</option>
-                  <option value="TR">🇹🇷 Turkey</option>
-                  <option value="NL">🇳🇱 Netherlands</option>
-                </select>
-              </div>
-              <div className="pt-2 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">Automatic Translation</span>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" value="" className="sr-only peer" defaultChecked />
-                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                  </label>
-                </div>
-              </div>
+          {/* Success Message */}
+          {success && (
+            <div className="mb-6 bg-green-900/30 border border-green-700 text-green-300 px-4 py-3 rounded-lg flex items-center space-x-2">
+              <span className="text-lg">✅</span>
+              <span>{success}</span>
             </div>
-          </div>
+          )}
 
-          {/* === 3. ACCOUNT & PREFERENCES (RESTORED) === */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-6 flex items-center"><FaPalette className="mr-3 text-purple-500" /> Account & Preferences</h2>
-            <div className="space-y-4">
+          {/* Settings Card */}
+          <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+            {/* Settings Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 sm:p-8">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="font-medium flex items-center"><FaEnvelope className="mr-2 text-gray-400" /> Email Address</span>
-                  <p className="text-gray-600">user-email@example.com</p>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-white">
+                    Application Settings
+                  </h2>
+                  <p className="text-blue-100 mt-2">Configure your language learning experience</p>
                 </div>
-                <button className="text-sm text-blue-600 hover:underline">Change</button>
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="font-medium flex items-center"><FaLock className="mr-2 text-gray-400" /> Password</span>
-                  <p className="text-gray-600">********</p>
+                <div className="flex-shrink-0">
+                  {!isEditing ? (
+                    <button
+                      onClick={handleEditStart}
+                      className="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors flex items-center space-x-2"
+                    >
+                      <FaEdit />
+                      <span>Edit Settings</span>
+                    </button>
+                  ) : (
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={handleSave}
+                        disabled={isLoading}
+                        className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center space-x-2"
+                      >
+                        <FaSave />
+                        <span>Save</span>
+                      </button>
+                      <button
+                        onClick={handleCancel}
+                        className="bg-gray-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-700 transition-colors flex items-center space-x-2"
+                      >
+                        <FaTimes />
+                        <span>Cancel</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <button onClick={() => setPasswordModalOpen(true)} className="text-sm text-blue-600 hover:underline">Change</button>
-              </div>
-              <div>
-                <label className="block text-gray-700 font-medium">Display Language</label>
-                <select className="w-full p-2 border rounded mt-1 text-gray-900">
-                  <option>English</option>
-                  <option>Arabic (العربية)</option>
-                </select>
               </div>
             </div>
-          </div>
 
-          {/* === 4. DANGER ZONE (RESTORED) === */}
-          <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4 flex items-center text-red-700"><FaExclamationTriangle className="mr-3" /> Danger Zone</h2>
-            <p className="text-red-600 mb-4">These actions are permanent and cannot be undone.</p>
-            <button 
-              onClick={() => setDeleteModalOpen(true)} 
-              className="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-red-50"
-            >
-              <FaExclamationTriangle className="mr-2" />
-              <span>Delete My Account</span>
-            </button>
-          </div>
-          
-          {/* === 5. ACTION BUTTONS (RESTORED) === */}
-          <div className="flex flex-col sm:flex-row items-center gap-4 pt-4 border-t mt-8">
-            <button 
-              onClick={handleSaveChanges}
-              disabled={isSaving}
-              className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none min-w-[140px]"
-            >
-              {isSaving ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                  <span>Saving...</span>
-                </>
+            {/* Settings Content */}
+            <div className="p-6 sm:p-8">
+              {!isEditing ? (
+                // View Mode
+                <div className="space-y-8">
+                  {/* Application Preferences */}
+                  <div>
+                    <h3 className="text-xl font-semibold text-white mb-4 flex items-center space-x-2">
+                      <FaPalette />
+                      <span>Application Preferences</span>
+                    </h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-gray-400 text-sm mb-1">Display Language</label>
+                        <div className="text-white font-medium">{user.displayLanguage || 'English'}</div>
+                      </div>
+                      <div>
+                        <label className="block text-gray-400 text-sm mb-1">Automatic Translation</label>
+                        <div className="text-white font-medium">
+                          {user.automaticTranslation ? 'Enabled' : 'Disabled'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Account Actions */}
+                  <div>
+                    <h3 className="text-xl font-semibold text-white mb-4 flex items-center space-x-2">
+                      <FaGlobe />
+                      <span>Account Actions</span>
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="p-4 bg-gray-700/50 rounded-lg">
+                        <div>
+                          <span className="font-medium text-white flex items-center">
+                            <FaEnvelope className="mr-2 text-gray-400" /> Email Address
+                          </span>
+                          <p className="text-gray-400">{user.email}</p>
+                          <p className="text-xs text-gray-500 mt-1">Email cannot be changed for security reasons</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between p-4 bg-gray-700/50 rounded-lg">
+                        <div>
+                          <span className="font-medium text-white flex items-center">
+                            <FaLock className="mr-2 text-gray-400" /> Password
+                          </span>
+                          <p className="text-gray-400">********</p>
+                        </div>
+                        <button onClick={() => setPasswordModalOpen(true)} className="text-sm text-blue-400 hover:text-blue-300 transition-colors">
+                          Change
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Danger Zone */}
+                  <div className="bg-red-900/20 border border-red-700 rounded-lg p-6">
+                    <h3 className="text-xl font-semibold text-red-400 mb-4 flex items-center space-x-2">
+                      <FaExclamationTriangle />
+                      <span>Danger Zone</span>
+                    </h3>
+                    <p className="text-red-300 mb-4">These actions are permanent and cannot be undone.</p>
+                    <button 
+                      onClick={() => setDeleteModalOpen(true)} 
+                      className="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-red-50"
+                    >
+                      <FaExclamationTriangle className="mr-2" />
+                      <span>Delete My Account</span>
+                    </button>
+                  </div>
+
+                  {/* Logout Button */}
+                  <div className="flex justify-center pt-6 border-t border-gray-700">
+                    <button 
+                      onClick={handleLogout}
+                      disabled={isLoggingOut}
+                      className="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    >
+                      {isLoggingOut ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                          <span>Logging out...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FaSignOutAlt className="mr-2" /> 
+                          <span>Logout</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
               ) : (
-                <>
-                  <FaSave className="mr-2" /> 
-                  <span>Save Changes</span>
-                </>
+                // Edit Mode
+                <div className="space-y-6">
+                  {/* General Error */}
+                  {errors.general && (
+                    <div className="bg-red-900/30 border border-red-700 text-red-300 px-4 py-3 rounded-lg flex items-center space-x-2">
+                      <span className="text-lg">❌</span>
+                      <span>{errors.general}</span>
+                    </div>
+                  )}
+
+                  {/* Application Preferences Edit */}
+                  <div>
+                    <h3 className="text-xl font-semibold text-white mb-4">Application Preferences</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-gray-300 text-sm font-medium mb-2">Display Language</label>
+                        <select
+                          name="displayLanguage"
+                          value={formData.displayLanguage}
+                          onChange={handleChange}
+                          className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        >
+                          <option value="English" className="bg-gray-700">English</option>
+                          <option value="Arabic" className="bg-gray-700">Arabic (العربية)</option>
+                          <option value="Spanish" className="bg-gray-700">Spanish (Español)</option>
+                          <option value="French" className="bg-gray-700">French (Français)</option>
+                          <option value="German" className="bg-gray-700">German (Deutsch)</option>
+                          <option value="Chinese" className="bg-gray-700">Chinese (中文)</option>
+                          <option value="Japanese" className="bg-gray-700">Japanese (日本語)</option>
+                          <option value="Korean" className="bg-gray-700">Korean (한국어)</option>
+                        </select>
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 bg-gray-700/50 rounded-lg">
+                        <div>
+                          <span className="font-medium text-white">Automatic Translation</span>
+                          <p className="text-gray-400 text-sm">Automatically translate messages in conversations</p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            name="automaticTranslation"
+                            checked={formData.automaticTranslation}
+                            onChange={handleChange}
+                            className="sr-only peer" 
+                          />
+                          <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
-            </button>
-            <button 
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-              className="w-full sm:w-auto px-6 py-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none min-w-[120px]"
-            >
-              {isLoggingOut ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                  <span>Logging out...</span>
-                </>
-              ) : (
-                <>
-                  <FaSignOutAlt className="mr-2" /> 
-                  <span>Logout</span>
-                </>
-              )}
-            </button>
+            </div>
           </div>
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 "use client";
 
-import { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import { createContext, useState, useContext, ReactNode, useEffect, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 
 // Define the shape of the data in our context
@@ -51,19 +51,21 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isAuthenticated, user]);
 
+  const contextValue = useMemo(() => ({
+    username,
+    avatar,
+    nativeLanguage,
+    targetLanguage,
+    nationality,
+    setUsername,
+    setAvatar,
+    setNativeLanguage,
+    setTargetLanguage,
+    setNationality
+  }), [username, avatar, nativeLanguage, targetLanguage, nationality]);
+
   return (
-    <UserContext.Provider value={{ 
-      username, 
-      avatar, 
-      nativeLanguage, 
-      targetLanguage, 
-      nationality,
-      setUsername, 
-      setAvatar,
-      setNativeLanguage,
-      setTargetLanguage,
-      setNationality
-    }}>
+    <UserContext.Provider value={contextValue}>
       {children}
     </UserContext.Provider>
   );

@@ -1,9 +1,9 @@
 // app/groups/[groupId]/page.tsx
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { FaComment, FaGift, FaHeadphones, FaRegSmile, FaSignOutAlt, FaUserPlus, FaTimes, FaCheck, FaUserMinus, FaMicrophone, FaMicrophoneSlash, FaVolumeUp, FaVolumeMute, FaInfoCircle, FaImage, FaImages } from 'react-icons/fa';
+import { FaComment, FaSignOutAlt, FaUserPlus, FaTimes, FaCheck, FaUserMinus, FaMicrophone, FaInfoCircle, FaVolumeMute, FaMicrophoneSlash, FaVolumeUp } from 'react-icons/fa';
 import MemberAvatar from '@/components/MemberAvatar';
 import { useUser } from '@/context/UserContext';
 import { useMessaging } from '@/context/MessagingContext';
@@ -16,9 +16,11 @@ import ImageGalleryModal from '@/components/modals/ImageGalleryModal';
 import GroupChat from '@/components/GroupChat';
 import ConnectionStatus from '@/components/ConnectionStatus';
 import VoiceButton from '@/components/VoiceButton';
+import ConversationReact from '@/components/ConversationReact';
 import { VoiceProvider, useVoice } from '@/context/VoiceContext';
 import { getFlagEmoji, getCountryName } from '@/utils/flags';
 import { offlineManager, useNetworkStatus } from '@/lib/offline';
+import WebSocketService from '@/lib/websocket';
 
 // TypeScript interfaces for real API data
 interface User {
@@ -56,14 +58,17 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
+  // WebSocket state
+  const [wsConnected, setWsConnected] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
+  
   // Initialize context hooks first
-  const { username, avatar, nationality, nativeLanguage, targetLanguage } = useUser();
+  const { username, avatar } = useUser();
   const { user, isAuthenticated } = useAuth();
-  const { conversations, addMessage, getConversation } = useMessaging();
+  const { addMessage, getConversation } = useMessaging();
   const { showSuccess, showInfo, showWarning, showError } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isOnline } = useNetworkStatus();
 
   // Auto-join voice component
   const AutoJoinVoice = () => {
@@ -90,9 +95,154 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
     getGroupId();
   }, [params]);
 
+  // WebSocket connection and event handling
+  const initializeWebSocket = useCallback(async () => {
+    if (!user?.id || !username || !groupId) {
+      console.log('WebSocket initialization skipped - missing dependencies:', { userId: user?.id, username, groupId });
+      return;
+    }
+
+    console.log('Initializing WebSocket connection...');
+    try {
+      const wsService = WebSocketService.getInstance();
+      
+      // Connect to WebSocket
+      console.log('Calling WebSocketService.connect()...');
+      await wsService.connect(user.id, username);
+      console.log('WebSocket connection established, setting wsConnected to true');
+      setWsConnected(true);
+      setReconnecting(false);
+      
+      // Join the group
+      console.log('Joining group:', groupId);
+      wsService.joinGroup(groupId);
+      
+      // Set up event listeners for group updates
+      wsService.on('group_updated', (payload: { groupId: string; groupData: GroupData }) => {
+        console.log('Received group_updated event:', payload);
+        if (payload.groupId === groupId) {
+          setGroupData(payload.groupData);
+        }
+      });
+      
+      wsService.on('user_joined', (payload: { groupId: string; userId: string }) => {
+        console.log('Received user_joined event:', payload);
+        if (payload.groupId === groupId) {
+          fetchGroupData(false); // Refresh data when user joins
+        }
+      });
+      
+      wsService.on('user_left', (payload: { groupId: string; userId: string }) => {
+        console.log('Received user_left event:', payload);
+        if (payload.groupId === groupId) {
+          fetchGroupData(false); // Refresh data when user leaves
+        }
+      });
+      
+      wsService.on('seat_request', (payload: { groupId: string; userId: string; seatPosition: number }) => {
+        console.log('Received seat_request event:', payload);
+        if (payload.groupId === groupId) {
+          fetchGroupData(false); // Refresh data when seat request is made
+        }
+      });
+      
+      wsService.on('connection_lost', () => {
+        console.log('WebSocket connection lost, setting wsConnected to false');
+        setWsConnected(false);
+        setReconnecting(true);
+      });
+      
+      wsService.on('connection_established', () => {
+        console.log('WebSocket connection established, setting wsConnected to true');
+        setWsConnected(true);
+        setReconnecting(false);
+        // Re-join group after reconnection
+        wsService.joinGroup(groupId);
+      });
+      
+      // Handle voice control changes from other users
+      wsService.on('voice_control_changed', (data: any) => {
+        console.log('Voice control changed:', data);
+        // Update local state or trigger re-fetch of group members
+        fetchGroupData(false);
+      });
+
+      // Handle emoji reactions from other users
+      wsService.on('emoji_reaction_received', (data: any) => {
+        console.log('Emoji reaction received:', data);
+        // You could show the reaction temporarily or handle it in the UI
+        // For now, we'll just log it
+      });
+      
+    } catch (error) {
+      console.error('WebSocket connection failed:', error);
+      setWsConnected(false);
+      setReconnecting(true);
+    }
+  }, [user?.id, username, groupId]);
+
+  // Initialize WebSocket when component mounts and dependencies are ready
+  useEffect(() => {
+    console.log('WebSocket initialization useEffect triggered, dependencies:', { userId: user?.id, username, groupId, isAuthenticated });
+    if (user?.id && username && groupId && isAuthenticated) {
+      console.log('Calling initializeWebSocket()...');
+      initializeWebSocket();
+    }
+    
+    // Cleanup function
+    return () => {
+      console.log('WebSocket cleanup function called');
+      const wsService = WebSocketService.getInstance();
+      if (wsService.isConnected()) {
+        wsService.leaveGroup(groupId);
+      }
+    };
+  }, [user?.id, username, groupId, isAuthenticated, initializeWebSocket]);
+
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Fallback polling for critical updates (reduced frequency and improved logic)
+  useEffect(() => {
+    console.log('Polling useEffect triggered, wsConnected:', wsConnected);
+    
+    // Clear any existing polling interval
+    if (pollingIntervalRef.current) {
+      console.log('Clearing existing polling interval');
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+    
+    // Only poll if WebSocket is not connected and we have the necessary data
+    if (!groupId || !isAuthenticated || wsConnected) {
+      console.log('Skipping polling - WebSocket connected or missing dependencies');
+      return;
+    }
+
+    console.log('Setting up fallback polling for group data (30 second intervals)');
+
+    // Poll every 30 seconds as fallback when WebSocket is not connected
+    pollingIntervalRef.current = setInterval(() => {
+      console.log('Executing fallback polling - fetching group data');
+      fetchGroupData(false);
+    }, 30000); // 30 seconds
+
+    return () => {
+      console.log('Cleaning up polling interval');
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [groupId, isAuthenticated, wsConnected]);
+
   // Fetch real group data from API
-  const fetchGroupData = async (isInitialLoad = false) => {
-    if (!groupId) return;
+  const fetchGroupData = useCallback(async (isInitialLoad = false) => {
+    if (!groupId) {
+      console.log('fetchGroupData called but no groupId');
+      return;
+    }
+    
+    console.log(`fetchGroupData called (isInitialLoad: ${isInitialLoad})`);
     
     // Only show loading spinner on initial load, not on polling updates
     if (isInitialLoad) {
@@ -104,6 +254,7 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
       const data = await response.json();
       
       if (data.success) {
+        console.log('fetchGroupData successful, updating groupData');
         setGroupData(data.group);
         setError(null);
       } else {
@@ -119,7 +270,7 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
         setLoading(false);
       }
     }
-  };
+  }, [groupId]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -129,11 +280,8 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
 
     if (groupId) {
       fetchGroupData(true); // Initial load with loading spinner
-      // Set up polling for real-time updates (without loading spinner)
-      const interval = setInterval(() => fetchGroupData(false), 5000);
-      return () => clearInterval(interval);
     }
-  }, [groupId, isAuthenticated]);
+  }, [groupId, isAuthenticated, fetchGroupData, router]);
 
 
   
@@ -142,17 +290,18 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
   const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
   const [selectedListener, setSelectedListener] = useState<string | null>(null);
   const [showUserInfo, setShowUserInfo] = useState(false);
-  const [seatMuteStates, setSeatMuteStates] = useState<{ [position: number]: boolean }>({});
   const [showMessagingPanel, setShowMessagingPanel] = useState(false);
   const [messagingUser, setMessagingUser] = useState<{id: string, name: string, avatar: string} | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [isJoiningAsListener, setIsJoiningAsListener] = useState(false);
   const [showJoinBanner, setShowJoinBanner] = useState(false);
+  const [showChat, setShowChat] = useState(false);
 
-  const [currentUserJoinRequest, setCurrentUserJoinRequest] = useState<number | null>(null);
   const [showOwnerLeaveModal, setShowOwnerLeaveModal] = useState(false);
   const [purpleCrownAdmins, setPurpleCrownAdmins] = useState<string[]>([]);
-  const [showChat, setShowChat] = useState(false);
+  // Drag and drop state
+  const [draggedUser, setDraggedUser] = useState<{user: User, fromSeat: number} | null>(null);
+  const [dragOverSeat, setDragOverSeat] = useState<number | null>(null);
   
   // Image sharing states
   const [showImageUploadModal, setShowImageUploadModal] = useState(false);
@@ -201,13 +350,6 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
       
       showWarning('Closing group permanently...');
 
-      console.log('Attempting to delete group:', {
-        groupId,
-        userId: user.id,
-        username: user.username,
-        userObject: user
-      });
-
       const response = await fetch('/api/groups', {
         method: 'DELETE',
         headers: {
@@ -220,7 +362,6 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
       });
 
       const data = await response.json();
-      console.log('Delete response:', { status: response.status, data });
 
       if (!response.ok) {
         // Provide more specific error messages
@@ -295,7 +436,6 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
   
   const isOwner = groupData?.owner.id === user?.id && !isJoiningAsListener;
   const isListener = currentUserRole === 'LISTENER';
-  const isParticipant = currentUserRole === 'PARTICIPANT';
 
   // Get join requests for notifications
   const activeJoinRequests = groupData?.waitingUsers.filter(u => u.hasRequested) || [];
@@ -358,51 +498,6 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
       showError('Failed to demote user');
     }
     setSelectedSeat(null);
-  };
-
-  const handleAcceptUser = async (userId: string) => {
-    if (!groupData) return;
-    
-    // Find first empty seat and assign user to it
-    const emptySeatIndex = groupData.tableSeats.findIndex((seat: { position: number; user: User | null }) => seat.user === null);
-    if (emptySeatIndex !== -1) {
-      try {
-        const response = await fetch('/api/groups/actions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            action: 'promote_user',
-            groupId: groupId,
-            targetUserId: userId,
-            seatPosition: emptySeatIndex,
-            requesterId: user?.id
-          }),
-        });
-
-        const data = await response.json();
-        if (data.success) {
-          showSuccess(data.message);
-          // Refresh group data
-          fetchGroupData(false);
-        } else {
-          showError(data.error);
-        }
-      } catch (error) {
-        console.error('Error promoting user:', error);
-        showError('Failed to promote user');
-      }
-    } else {
-      showWarning('No empty seats available');
-    }
-    setSelectedListener(null);
-  };
-
-  const handleRejectUser = async (userId: string) => {
-    // For now, just close the selection since we're not implementing join requests table yet
-    showInfo('User request rejected');
-    setSelectedListener(null);
   };
 
   const handleRequestToJoin = (userId: string) => {
@@ -477,37 +572,6 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
     setSelectedSeat(null);
   };
 
-  const handleRemovePurpleCrownAdmin = async (userId: string, userName: string) => {
-    try {
-      const response = await fetch('/api/groups/actions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'revoke_admin',
-          groupId: groupId,
-          targetUserId: userId,
-          requesterId: user?.id
-        }),
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        showInfo(`${userName}'s admin privileges have been removed`);
-        setPurpleCrownAdmins(prev => prev.filter(id => id !== userId));
-        // Refresh group data
-        fetchGroupData(false);
-      } else {
-        showError(data.error);
-      }
-    } catch (error) {
-      console.error('Error revoking admin:', error);
-      showError('Failed to revoke admin privileges');
-    }
-    setSelectedSeat(null);
-  };
-
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !messagingUser) return;
@@ -544,7 +608,6 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
       };
       
       setGroupImages(prev => [newImage, ...prev]);
-      console.log('Image uploaded:', newImage);
     } catch (error) {
       console.error('Image upload failed:', error);
       alert('Failed to upload image. Please try again.');
@@ -553,7 +616,6 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
 
   const handleDeleteImage = (imageId: string) => {
     setGroupImages(prev => prev.filter(img => img.id !== imageId));
-    console.log('Image deleted:', imageId);
   };
 
   const handleSeatClick = async (position: number) => {
@@ -585,6 +647,24 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
 
         if (data.success) {
           showSuccess(`You requested Section ${position + 1}. Wait for approval from the group owner.`);
+          
+          // Send WebSocket update if connected
+          if (wsConnected) {
+            const wsService = WebSocketService.getInstance();
+            // wsService.send({
+            //   type: 'group_action',
+            //   payload: {
+            //     action: 'seat_requested',
+            //     userId: user.id,
+            //     seatPosition: position
+            //   },
+            //   groupId: groupData.id,
+            //   userId: user.id,
+            //   username: username || '',
+            //   timestamp: Date.now()
+            // });
+          }
+          
           fetchGroupData(false); // Refresh data to show request
         } else {
           showError(data.error || 'Failed to request seat');
@@ -618,6 +698,24 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
 
       if (data.success) {
         showSuccess('Join request accepted');
+        
+        // Send WebSocket update if connected
+        if (wsConnected) {
+          const wsService = WebSocketService.getInstance();
+          // wsService.send({
+          //   type: 'group_action',
+          //   payload: {
+          //     action: 'user_promoted',
+          //     userId: userId,
+          //     seatPosition: seatPosition
+          //   },
+          //   groupId: groupData.id,
+          //   userId: user?.id || '',
+          //   username: username || '',
+          //   timestamp: Date.now()
+          // });
+        }
+        
         fetchGroupData(false); // Refresh data
       } else {
         showError(data.error || 'Failed to accept request');
@@ -656,6 +754,143 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
     } catch (error) {
       console.error('Error rejecting request:', error);
       showError('Failed to reject request');
+    }
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, user: User, seatIndex: number) => {
+    if (!isOwner) return; // Only owners can drag users
+    setDraggedUser({ user, fromSeat: seatIndex });
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, seatIndex: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverSeat(seatIndex);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverSeat(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, toSeatIndex: number) => {
+    e.preventDefault();
+    setDragOverSeat(null);
+
+    if (!draggedUser || draggedUser.fromSeat === toSeatIndex || !isOwner || !groupData) return;
+
+    // Optimistic update for better UX
+    const originalSeats = [...groupData.tableSeats];
+    const updatedSeats = [...groupData.tableSeats];
+    const userToMove = updatedSeats[draggedUser.fromSeat].user;
+    updatedSeats[draggedUser.fromSeat].user = null;
+    updatedSeats[toSeatIndex].user = userToMove;
+    
+    // Temporarily update UI for immediate feedback
+    setGroupData(prev => prev ? {
+      ...prev,
+      tableSeats: updatedSeats
+    } : prev);
+
+    try {
+      const response = await fetch(`/api/groups/${groupId}/actions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'move_user',
+          userId: draggedUser.user.id,
+          fromSeat: draggedUser.fromSeat,
+          toSeat: toSeatIndex
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          showSuccess(`${draggedUser.user.name} moved to Section ${toSeatIndex + 1}`);
+          
+          // Send WebSocket update
+          if (wsConnected) {
+            const wsService = WebSocketService.getInstance();
+            // wsService.send({
+            //   type: 'group_action',
+            //   payload: {
+            //     action: 'user_moved',
+            //     userId: draggedUser.user.id,
+            //     fromSeat: draggedUser.fromSeat,
+            //     toSeat: toSeatIndex
+            //   },
+            //   groupId: groupId,
+            //   userId: user?.id || '',
+            //   username: username || '',
+            //   timestamp: Date.now()
+            // });
+          }
+          
+          fetchGroupData(false); // Refresh data to ensure consistency
+        } else {
+          // Revert optimistic update on failure
+          setGroupData(prev => prev ? {
+            ...prev,
+            tableSeats: originalSeats
+          } : prev);
+          showError(data.error || 'Failed to move user');
+        }
+      } else {
+        // Revert optimistic update on failure
+        setGroupData(prev => prev ? {
+          ...prev,
+          tableSeats: originalSeats
+        } : prev);
+        
+        if (response.status === 403) {
+          showError('You do not have permission to move users');
+        } else if (response.status === 404) {
+          showError('User or seat not found');
+        } else {
+          showError('Failed to move user. Please try again.');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to move user:', error);
+      
+      // Revert optimistic update on error
+      setGroupData(prev => prev ? {
+        ...prev,
+        tableSeats: originalSeats
+      } : prev);
+      
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        showError('Network error. Please check your connection and try again.');
+      } else {
+        showError('Failed to move user. Please try again.');
+      }
+    }
+
+    setDraggedUser(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedUser(null);
+    setDragOverSeat(null);
+  };
+
+  // Voice control and emoji reaction handlers
+  const handleVoiceControlChange = (userId: string, controls: {isMuted: boolean, isDeafened: boolean}) => {
+    console.log(`Voice controls changed for user ${userId}:`, controls);
+    // TODO: Integrate with actual voice service (Agora)
+    // Example: agoraService.muteUser(userId, controls.isMuted);
+    // Example: agoraService.deafenUser(userId, controls.isDeafened);
+  };
+
+  const handleEmojiReaction = (seatPosition: number, emoji: string) => {
+    console.log(`Emoji reaction ${emoji} from seat ${seatPosition}`);
+    
+    // TODO: Send emoji reaction via WebSocket to other users
+    if (wsConnected) {
+      const wsService = WebSocketService.getInstance();
+      // wsService.sendEmojiReaction(groupId, seatPosition, emoji);
     }
   };
 
@@ -716,6 +951,9 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
         <p className="text-yellow-200 text-sm">
           <strong>Debug Info:</strong> {user ? `Logged in as ${user.username} (ID: ${user.id})` : 'Not logged in - Please log in to delete groups'}
         </p>
+        <p className="text-yellow-200 text-sm mt-1">
+          <strong>WebSocket:</strong> {wsConnected ? '🟢 Connected' : reconnecting ? '🟡 Reconnecting...' : '🔴 Disconnected'}
+        </p>
       </div>
       
       <div className="p-4 shadow-md bg-gray-800 z-10">
@@ -733,7 +971,12 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
             <h1 className="text-xl font-bold">{groupData.name}</h1>
             <span className="text-sm bg-gray-700 px-3 py-1 rounded-full mt-1 inline-block">{groupData.language}</span>
             <div className="flex flex-col items-center gap-2 mt-2">
-              <ConnectionStatus className="justify-center" />
+              <ConnectionStatus 
+                showChatStatus={true} 
+                wsConnected={wsConnected}
+                reconnecting={reconnecting}
+                className="justify-center" 
+              />
               {/* Voice Button */}
               <VoiceButton 
                 groupId={groupId} 
@@ -797,14 +1040,32 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
                 </div>
               </div>
             )}
+            
+            {/* Instructions for voice controls */}
+            {groupData.tableSeats.some(seat => seat.user?.id === user?.id) && (
+              <div className="absolute -top-24 left-0 right-0 mx-auto max-w-md bg-blue-900/30 border border-blue-500/30 p-2 rounded-lg text-center">
+                <p className="text-blue-200 text-xs">
+                  <strong>Voice Controls:</strong> Use the buttons below your avatar to mute/unmute yourself, control audio from others, and send emoji reactions
+                </p>
+              </div>
+            )}
+            
             <div className="grid grid-cols-5 gap-4">
               {groupData.tableSeats.map((seat) => (
-                <div key={seat.position} className="relative flex flex-col items-center">
+                <div 
+                  key={seat.position} 
+                  className="relative flex flex-col items-center"
+                  onDragOver={(e) => handleDragOver(e, seat.position)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, seat.position)}
+                >
                   {seat.user ? (
                     <div 
+                      draggable={isOwner && !seat.user.isOwner}
+                      onDragStart={(e) => handleDragStart(e, seat.user!, seat.position)}
+                      onDragEnd={handleDragEnd}
                       onClick={() => {
                         if (seat.user) {
-                          console.log('Clicked user:', seat.user.name, 'ID:', seat.user.id);
                           
                           if (isOwner && !seat.user.isOwner) {
                             // For owners: only show management options, don't show user info popup
@@ -816,9 +1077,28 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
                           }
                         }
                       }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          if (seat.user) {
+                            if (isOwner && !seat.user.isOwner) {
+                              setSelectedSeat(selectedSeat === seat.position ? null : seat.position);
+                            } else if (!isOwner) {
+                              setSelectedListener(seat.user.id);
+                              setShowUserInfo(true);
+                            }
+                          }
+                        }
+                      }}
                       className={`cursor-pointer transition-all duration-200 ${
                         selectedSeat === seat.position ? 'transform scale-105' : ''
+                      } ${isOwner && !seat.user.isOwner ? 'cursor-move hover:scale-110 focus:ring-2 focus:ring-blue-400' : 'focus:ring-2 focus:ring-blue-400'} ${
+                        dragOverSeat === seat.position ? 'ring-2 ring-blue-400 ring-opacity-50' : ''
                       }`}
+                      title={isOwner && !seat.user.isOwner ? 'Drag to move user to another seat' : ''}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`${seat.user.name} in Section ${seat.position + 1}${isOwner && !seat.user.isOwner ? ', draggable' : ''}`}
                     >
                       <MemberAvatar 
                         name={seat.user.name} 
@@ -829,25 +1109,58 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
                         userId={seat.user.id}
                       />
                       {/* Mute indicator */}
-                      {(seat.user.isMuted || seatMuteStates[seat.position]) && (
+                      {seat.user.isMuted && (
                         <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-gray-800 flex items-center justify-center">
                           <FaVolumeMute className="text-xs text-white" />
+                        </div>
+                      )}
+                      
+                      {/* Drag indicator for owners */}
+                      {isOwner && !seat.user.isOwner && (
+                        <div className="absolute -bottom-1 -left-1 w-4 h-4 bg-blue-500 rounded-full border-2 border-gray-800 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <span className="text-xs text-white">↕️</span>
                         </div>
                       )}
                     </div>
                   ) : (
                     <div 
                       onClick={() => handleSeatClick(seat.position)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleSeatClick(seat.position);
+                        }
+                      }}
                       className={`w-16 h-16 rounded-full border-2 border-dashed flex items-center justify-center text-gray-500 relative ${
                         isListener 
-                          ? 'border-blue-400 hover:border-blue-300 cursor-pointer hover:bg-blue-900/30 hover:text-blue-300' 
-                          : 'border-gray-600'
-                      }`}
+                          ? 'border-blue-400 hover:border-blue-300 cursor-pointer hover:bg-blue-900/30 hover:text-blue-300 focus:ring-2 focus:ring-blue-400' 
+                          : 'border-gray-600 focus:ring-2 focus:ring-gray-400'
+                      } ${dragOverSeat === seat.position ? 'border-blue-400 bg-blue-900/30' : ''}`}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Section ${seat.position + 1}, ${seat.user ? 'occupied' : 'empty'}${isListener ? ', clickable to request' : ''}`}
                     >
                       <span className="text-xs">
                         {isListener ? 'Click to Request' : 'Empty'}
                       </span>
+                      {dragOverSeat === seat.position && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-blue-300 text-lg">⬇️</span>
+                        </div>
+                      )}
                     </div>
+                  )}
+                  
+                  {/* Conversation React Component for voice controls and emoji reactions */}
+                  {seat.user && (
+                    <ConversationReact 
+                      userId={seat.user.id}
+                      seatPosition={seat.position}
+                      isCurrentUser={seat.user.id === user?.id}
+                      groupId={groupId}
+                      onVoiceControlChange={handleVoiceControlChange}
+                      onEmojiReaction={handleEmojiReaction}
+                    />
                   )}
                   
                   {/* Action buttons for owner */}
@@ -882,23 +1195,36 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
           </div>
         </div>
 
-        {/* Instructions for listeners */}
-        {isListener && (
+        {/* Drag and Drop Instructions for Owners */}
+        {isOwner && (
           <div className="mb-6 mx-4">
             <div className="bg-blue-900/30 border border-blue-500/30 p-4 rounded-lg">
               <h3 className="text-blue-200 font-semibold mb-2 flex items-center gap-2">
-                <span className="text-lg">ℹ️</span>
-                Listener Instructions
+                <span className="text-lg">🎯</span>
+                Group Management Tools
               </h3>
               <div className="text-blue-100 text-sm space-y-1">
-                <p>• Click on any <span className="text-blue-300 font-semibold">empty table section</span> to request joining</p>
-                <p>• Wait for the group owner to accept your request</p>
-                <p>• You can cancel your request by clicking the section again</p>
-                {currentUserJoinRequest !== null && (
-                  <p className="text-yellow-300 font-semibold">
-                    🟡 You have requested Section {currentUserJoinRequest + 1} - waiting for approval
-                  </p>
-                )}
+                <p>• <span className="font-semibold">Drag & Drop:</span> Click and drag participant avatars to move them between seats</p>
+                <p>• <span className="font-semibold">Click Management:</span> Click on a participant to access kick/demote options</p>
+                <p>• <span className="font-semibold">Real-time Updates:</span> All changes are synchronized instantly across all users</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Voice Controls Instructions for Seated Users */}
+        {groupData.tableSeats.some(seat => seat.user?.id === user?.id) && (
+          <div className="mb-6 mx-4">
+            <div className="bg-green-900/30 border border-green-500/30 p-4 rounded-lg">
+              <h3 className="text-green-200 font-semibold mb-2 flex items-center gap-2">
+                <span className="text-lg">🎤</span>
+                Voice Controls Available
+              </h3>
+              <div className="text-green-100 text-sm space-y-1">
+                <p>• <span className="font-semibold">Microphone:</span> Mute/unmute your microphone</p>
+                <p>• <span className="font-semibold">Speaker:</span> Mute/unmute others to control what you hear</p>
+                <p>• <span className="font-semibold">Reactions:</span> Send emoji reactions to express yourself</p>
+                <p className="text-green-200 text-xs mt-2">💡 Look for controls below your avatar in the speaking section</p>
               </div>
             </div>
           </div>
@@ -1072,8 +1398,6 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
                     isTableUser = true;
                   }
                   
-                  console.log('Modal user found:', user, 'isTableUser:', isTableUser);
-                  
                   return user ? (
                     <div className="space-y-3">
                       <div className="flex items-center space-x-3">
@@ -1120,7 +1444,6 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
                               <button 
                                 onClick={() => {
                                   // Handle follow functionality for table users
-                                  console.log('Following user:', user.id);
                                   setShowUserInfo(false);
                                 }}
                                 className="flex-1 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 flex items-center justify-center gap-2"
@@ -1175,7 +1498,6 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
                                   <button 
                                     onClick={() => {
                                       // Handle follow functionality for listeners
-                                      console.log('Following user:', user.id);
                                       setShowUserInfo(false);
                                     }}
                                     className="flex-1 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 flex items-center justify-center gap-2"
