@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { useTheme } from '@/context/ThemeContext';
 
 // Custom hooks for mobile detection
 export const useIsMobile = () => {
@@ -79,7 +78,6 @@ export const MobileButton: React.FC<MobileButtonProps> = ({
   className = '',
   type = 'button',
 }) => {
-  const { theme } = useTheme();
   const isTouchDevice = useIsTouchDevice();
 
   const baseClasses = `
@@ -99,15 +97,9 @@ export const MobileButton: React.FC<MobileButtonProps> = ({
   };
 
   const variantClasses = {
-    primary: theme === 'dark' 
-      ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white focus:ring-blue-500 shadow-lg hover:shadow-xl'
-      : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white focus:ring-blue-500 shadow-lg hover:shadow-xl',
-    secondary: theme === 'dark'
-      ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 border border-gray-600 focus:ring-gray-500 shadow-md hover:shadow-lg'
-      : 'bg-gray-200 hover:bg-gray-300 text-gray-800 border border-gray-300 focus:ring-gray-400 shadow-md hover:shadow-lg',
-    danger: theme === 'dark'
-      ? 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500 shadow-lg hover:shadow-xl'
-      : 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500 shadow-lg hover:shadow-xl',
+    primary: 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white focus:ring-blue-500 shadow-lg hover:shadow-xl',
+    secondary: 'bg-gray-700 hover:bg-gray-600 text-gray-200 border border-gray-600 focus:ring-gray-500 shadow-md hover:shadow-lg',
+    danger: 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500 shadow-lg hover:shadow-xl',
   };
 
   return (
@@ -136,23 +128,17 @@ export const MobileCard: React.FC<MobileCardProps> = ({
   padding = 'md',
   shadow = true,
 }) => {
-  const { theme } = useTheme();
-
   const paddingClasses = {
     sm: 'p-3',
     md: 'p-4',
     lg: 'p-6',
   };
 
-  const themeClasses = theme === 'dark'
-    ? 'bg-gray-800 border-gray-700'
-    : 'bg-white border-gray-200';
-
   return (
     <div
       className={`
-        rounded-lg border ${shadow ? 'shadow-sm' : ''} 
-        ${paddingClasses[padding]} ${themeClasses} ${className}
+        rounded-lg border bg-gray-800 border-gray-700 ${shadow ? 'shadow-sm' : ''} 
+        ${paddingClasses[padding]} ${className}
       `}
     >
       {children}
@@ -180,18 +166,12 @@ export const MobileInput = React.forwardRef<HTMLInputElement, MobileInputProps>(
   disabled = false,
   autoComplete,
 }, ref) => {
-  const { theme } = useTheme();
-
   const baseClasses = `
     w-full px-4 py-3 rounded-lg border transition-colors duration-200
     min-h-[48px] text-base
     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
     ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
   `;
-
-  const themeClasses = theme === 'dark'
-    ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
-    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500';
 
   return (
     <input
@@ -202,7 +182,7 @@ export const MobileInput = React.forwardRef<HTMLInputElement, MobileInputProps>(
       onChange={onChange}
       disabled={disabled}
       autoComplete={autoComplete}
-      className={`${baseClasses} ${themeClasses} ${className}`}
+      className={`${baseClasses} bg-gray-800 border-gray-600 text-white placeholder-gray-400 ${className}`}
       style={{ fontSize: '16px' }}
     />
   );
@@ -224,31 +204,25 @@ export const MobileModal: React.FC<MobileModalProps> = ({
   title,
   children,
 }) => {
-  const { theme } = useTheme();
-
   if (!isOpen) return null;
 
   const overlayClasses = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-4';
-  
-  const modalClasses = theme === 'dark'
-    ? 'bg-gray-800 text-white'
-    : 'bg-white text-gray-900';
 
   return (
     <div className={overlayClasses} onClick={onClose}>
       <div
         className={`
-          w-full max-w-md rounded-t-lg sm:rounded-lg ${modalClasses}
+          w-full max-w-md rounded-t-lg sm:rounded-lg bg-gray-800 text-white
           shadow-xl transform transition-all duration-300
           max-h-[90vh] overflow-hidden
         `}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between p-4 border-b border-gray-700">
           <h3 className="text-lg font-semibold">{title}</h3>
           <button
             onClick={onClose}
-            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="p-2 rounded-full hover:bg-gray-700 transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -277,21 +251,15 @@ export const MobileListItem: React.FC<MobileListItemProps> = ({
   className = '',
   active = false,
 }) => {
-  const { theme } = useTheme();
-
   const baseClasses = `
     p-4 transition-colors duration-200 touch-manipulation
     ${onClick ? 'cursor-pointer active:scale-[0.98]' : ''}
   `;
 
-  const themeClasses = theme === 'dark'
-    ? `${active ? 'bg-gray-700' : 'hover:bg-gray-800'}`
-    : `${active ? 'bg-gray-100' : 'hover:bg-gray-50'}`;
-
   return (
     <div
       onClick={onClick}
-      className={`${baseClasses} ${themeClasses} ${className}`}
+      className={`${baseClasses} ${active ? 'bg-gray-700' : 'hover:bg-gray-800'} ${className}`}
     >
       {children}
     </div>

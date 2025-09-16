@@ -6,7 +6,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { MobileButton } from './MobileOptimized';
 import { 
-  FaHome, 
   FaUsers, 
   FaComments, 
   FaUser, 
@@ -19,7 +18,6 @@ import {
 
 const Sidebar = () => {
   const { user, logout } = useAuth();
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
@@ -30,7 +28,6 @@ const Sidebar = () => {
   };
 
   const menuItems = [
-    { href: '/', icon: FaHome, label: 'Home' },
     { href: '/groups', icon: FaUsers, label: 'Groups' },
     { href: '/messages', icon: FaComments, label: 'Messages' },
     { href: '/profile', icon: FaUser, label: 'Profile' },
@@ -48,13 +45,15 @@ const Sidebar = () => {
 
   return (
     <>
-      {/* Mobile Menu Button */}
-      <MobileButton
-        onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-4 bg-gray-800 text-white rounded-lg shadow-lg hover:bg-gray-700 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center"
-      >
-        {isMobileOpen ? <FaTimes className="text-lg" /> : <FaBars className="text-lg" />}
-      </MobileButton>
+      {/* Mobile Menu Button - Only visible on small screens */}
+      <div className="lg:hidden fixed top-4 left-4 z-50">
+        <MobileButton
+          onClick={() => setIsMobileOpen(!isMobileOpen)}
+          className="p-4 bg-gray-800 text-white rounded-lg shadow-lg hover:bg-gray-700 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center"
+        >
+          {isMobileOpen ? <FaTimes className="text-lg" /> : <FaBars className="text-lg" />}
+        </MobileButton>
+      </div>
 
       {/* Mobile Overlay */}
       {isMobileOpen && (
@@ -64,58 +63,31 @@ const Sidebar = () => {
         />
       )}
 
-      {/* Sidebar */}
-      <div className={`
-        fixed left-0 top-0 h-full bg-gray-900 border-r border-gray-700 z-40 transition-all duration-300
-        ${isCollapsed ? 'w-20' : 'w-72 lg:w-64'}
-        ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}>
+      {/* Sidebar Content */}
+      <div className="h-full w-full flex flex-col"
+        style={{transform: isMobileOpen ? 'translateX(0)' : '', transition: 'transform 0.3s ease-in-out'}}
+      >
         {/* Logo Section */}
-        <div className="p-6 border-b border-gray-700">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-              <FaGlobe className="text-white text-xl" />
-            </div>
-            {!isCollapsed && (
-              <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  LinguaConnect
-                </h1>
-              </div>
-            )}
+        <div className="py-6 border-b border-gray-700 flex items-center justify-center">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+            <FaGlobe className="text-white text-xl" />
           </div>
-          
-          {/* Collapse Button (Desktop Only) */}
-          <MobileButton
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="hidden lg:block absolute -right-3 top-8 w-6 h-6 bg-gray-700 border border-gray-600 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-600 transition-colors"
-          >
-            <FaBars className="text-xs" />
-          </MobileButton>
         </div>
 
         {/* User Profile Section */}
-        <div className="p-4 border-b border-gray-700">
-          <div className="flex items-center space-x-3 min-h-[48px]">
-            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-semibold text-lg">
+        <div className="py-4 border-b border-gray-700 flex flex-col items-center">
+          <div className="flex items-center justify-center min-h-[48px]">
+            <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+              <span className="text-white font-semibold text-sm">
                 {user.username.charAt(0).toUpperCase()}
               </span>
             </div>
-            {!isCollapsed && (
-              <div className="flex-1 min-w-0">
-                <p className="text-white font-medium truncate text-base">{user.username}</p>
-                <p className="text-gray-400 text-sm truncate">
-                  {user.nativeLanguage} → {user.targetLanguages[0] || 'Learning'}
-                </p>
-              </div>
-            )}
           </div>
         </div>
 
         {/* Navigation Menu */}
-        <nav className="flex-1 p-4">
-          <ul className="space-y-3">
+        <nav className="flex-1 py-4">
+          <ul className="space-y-6 flex flex-col items-center">
             {menuItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);
@@ -126,17 +98,15 @@ const Sidebar = () => {
                     href={item.href}
                     onClick={() => setIsMobileOpen(false)}
                     className={`
-                      flex items-center space-x-3 px-4 py-4 rounded-lg transition-all duration-200 group min-h-[48px]
+                      flex items-center justify-center p-3 rounded-lg transition-all duration-200 group min-h-[40px] min-w-[40px]
                       ${active 
                         ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' 
                         : 'text-gray-300 hover:bg-gray-800 hover:text-white'
                       }
                     `}
+                    title={item.label}
                   >
                     <Icon className={`text-xl ${active ? 'text-white' : 'text-gray-400 group-hover:text-white'}`} />
-                    {!isCollapsed && (
-                      <span className="font-medium text-base">{item.label}</span>
-                    )}
                   </Link>
                 </li>
               );
@@ -145,17 +115,15 @@ const Sidebar = () => {
         </nav>
 
         {/* Logout Button */}
-        <div className="p-4 border-t border-gray-700">
+        <div className="py-4 border-t border-gray-700 flex items-center justify-center">
           <MobileButton
             onClick={handleLogout}
             className={`
-              w-full flex items-center space-x-3 px-4 py-4 rounded-lg transition-all duration-200 min-h-[48px]
+              flex items-center justify-center p-3 rounded-lg transition-all duration-200 min-h-[40px] min-w-[40px]
               text-red-400 hover:bg-red-600/20 hover:text-red-300
-              ${isCollapsed ? 'justify-center' : ''}
             `}
           >
-            <FaSignOutAlt className="text-xl" />
-            {!isCollapsed && <span className="font-medium text-base">Logout</span>}
+            <FaSignOutAlt className="text-xl" title="Logout" />
           </MobileButton>
         </div>
       </div>

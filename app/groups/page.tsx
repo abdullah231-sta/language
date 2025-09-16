@@ -165,7 +165,7 @@ const GroupsPage = () => {
   });
 
   return (
-    <div className="min-h-screen bg-gray-900 p-4 md:p-8">
+    <div className="p-4 md:p-8 w-full">
       {/* Header */}
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">

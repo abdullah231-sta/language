@@ -16,9 +16,17 @@ const STORES = {
 
 class IndexedDBManager {
   private db: IDBDatabase | null = null;
+  private isInitialized: boolean = false;
+
+  // Check if database is initialized
+  isDbInitialized(): boolean {
+    return this.isInitialized && this.db !== null;
+  }
 
   // Initialize database
   async init(): Promise<void> {
+    if (this.isInitialized) return; // Already initialized
+
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
@@ -29,6 +37,7 @@ class IndexedDBManager {
 
       request.onsuccess = () => {
         this.db = request.result;
+        this.isInitialized = true;
         console.log('IndexedDB: Database opened successfully');
         resolve();
       };
@@ -114,7 +123,10 @@ class IndexedDBManager {
 
   // Generic method to get all data from store
   async getAll(storeName: string): Promise<any[]> {
-    if (!this.db) throw new Error('Database not initialized');
+    if (!this.isDbInitialized()) {
+      console.log('Database not initialized, returning empty array for getAll');
+      return [];
+    }
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([storeName], 'readonly');
@@ -221,6 +233,11 @@ class IndexedDBManager {
 
   // Get pending offline actions
   async getPendingActions(): Promise<any[]> {
+    if (!this.isDbInitialized()) {
+      console.log('Database not initialized, returning empty array for getPendingActions');
+      return [];
+    }
+
     const actions = await this.getAll(STORES.OFFLINE_ACTIONS);
     return actions.filter(action => !action.synced);
   }
@@ -241,6 +258,11 @@ class IndexedDBManager {
 
   // Get app setting
   async getSetting(key: string): Promise<any> {
+    if (!this.isDbInitialized()) {
+      console.log('Database not initialized, returning null for getSetting');
+      return null;
+    }
+
     const setting = await this.get(STORES.SETTINGS, key);
     return setting ? setting.value : null;
   }

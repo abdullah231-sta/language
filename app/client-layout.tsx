@@ -4,14 +4,18 @@
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { UserProvider } from "@/context/UserContext";
 import { MessagingProvider } from "@/context/MessagingContext";
-import { ThemeProvider } from "@/context/ThemeContext";
 import { NotificationProvider } from "@/context/NotificationContext";
 import { RealTimeChatProvider } from "@/context/RealTimeChatContext";
 import { ConversationTimeProvider } from "@/context/ConversationTimeContext";
 import { ToastProvider } from "@/context/ToastContext";
+import { OfflineProvider } from "@/context/OfflineProvider";
 import Sidebar from "@/components/Sidebar";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import OfflineIndicator from "@/components/OfflineIndicator";
+import ThreePanelLayout from "@/components/layout/ThreePanelLayout";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { offlineManager } from "@/lib/offline";
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -29,6 +33,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     return (
       <ProtectedRoute requireAuth={false}>
         <main className="w-full">{children}</main>
+        <OfflineIndicator />
       </ProtectedRoute>
     );
   }
@@ -36,14 +41,17 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   if (isHomePage) {
     // Home page - no authentication required, shows landing or dashboard based on auth
     return (
-      <main className={isAuthenticated ? "flex-1 lg:ml-64 transition-all duration-300" : "w-full"}>
+      <main className={isAuthenticated ? "h-screen w-full relative" : "w-full"}>
         {isAuthenticated && (
-          <div className="min-h-screen flex">
-            <Sidebar />
-            {children}
-          </div>
+          <ThreePanelLayout
+            sidebar={<Sidebar />}
+            mainContent={children}
+            sidebarWidth="w-20"
+            mainContentWidth="w-[600px]"
+          />
         )}
         {!isAuthenticated && children}
+        <OfflineIndicator />
       </main>
     );
   }
@@ -51,17 +59,52 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   // Protected pages - require authentication
   return (
     <ProtectedRoute requireAuth={true}>
-      <div className="min-h-screen flex">
-        <Sidebar />
-        <main className="flex-1 lg:ml-64 transition-all duration-300">{children}</main>
+      <div className="h-screen w-full relative">
+        <ThreePanelLayout
+          sidebar={<Sidebar />}
+          mainContent={children}
+          sidebarWidth="w-20"
+          mainContentWidth="w-[600px]"
+        />
+        <OfflineIndicator />
       </div>
     </ProtectedRoute>
   );
 }
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
+  const [isOfflineInitialized, setIsOfflineInitialized] = useState(false);
+
+  // Initialize offline manager on app start
+  useEffect(() => {
+    const initializeOffline = async () => {
+      try {
+        await offlineManager.init();
+        setIsOfflineInitialized(true);
+        console.log('Offline manager initialized successfully');
+      } catch (error) {
+        console.error('Failed to initialize offline manager:', error);
+        setIsOfflineInitialized(true); // Still set to true to prevent infinite loading
+      }
+    };
+
+    initializeOffline();
+  }, []);
+
+  // Show loading state until offline manager is initialized
+  if (!isOfflineInitialized) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
+          <p>Initializing app...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <ThemeProvider>
+    <OfflineProvider>
       <ToastProvider>
         <NotificationProvider>
           <AuthProvider>
@@ -77,6 +120,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           </AuthProvider>
         </NotificationProvider>
       </ToastProvider>
-    </ThemeProvider>
+    </OfflineProvider>
   );
 }

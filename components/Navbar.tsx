@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import ThemeToggle from './ThemeToggle';
 import NotificationBell from './NotificationBell';
 import { MobileButton } from './MobileOptimized';
 import { 
@@ -91,9 +90,6 @@ const Navbar = () => {
 
           {/* User Menu */}
           <div className="flex items-center space-x-4">
-            {/* Theme Toggle */}
-            <ThemeToggle />
-            
             {/* Notification Bell */}
             {currentUser && <NotificationBell />}
             
