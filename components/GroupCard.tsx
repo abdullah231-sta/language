@@ -125,28 +125,27 @@ const GroupCard = memo(({ id, name, language, memberCount, description, isJoined
 
   return (
     <div 
-      className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 sm:p-6 flex flex-col h-full hover:shadow-xl hover:scale-105 transform transition-all duration-300 border border-gray-100 dark:border-gray-700 group active:scale-100 touch-manipulation"
+      className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-5 flex flex-col h-full hover:shadow-xl hover:scale-[1.02] transform transition-all duration-300 border border-gray-100 dark:border-gray-700 group active:scale-[0.98] touch-manipulation min-h-[220px]"
     >
         {/* Header */}
-        <div className="flex justify-between items-start mb-3 gap-3">
-          <h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-white group-hover:text-blue-600 transition-colors duration-200 line-clamp-2 leading-tight">
+        <div className="flex justify-between items-start mb-4 gap-3">
+          <h3 className="text-base font-bold text-gray-800 dark:text-white group-hover:text-blue-600 transition-colors duration-200 line-clamp-2 leading-tight flex-1">
             {name}
           </h3>
-          <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs font-semibold px-2 sm:px-3 py-1 sm:py-1.5 rounded-full flex items-center whitespace-nowrap flex-shrink-0 group-hover:bg-blue-200 dark:group-hover:bg-blue-800 transition-colors duration-200">
-            <FaGlobe className="mr-1 sm:mr-1.5 text-xs" /> 
-            <span className="hidden sm:inline">{language}</span>
-            <span className="sm:hidden">{language.substring(0, 3)}</span>
+          <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs font-semibold px-3 py-1.5 rounded-full flex items-center whitespace-nowrap flex-shrink-0 group-hover:bg-blue-200 dark:group-hover:bg-blue-800 transition-colors duration-200">
+            <FaGlobe className="mr-1.5 text-xs" /> 
+            {language}
           </span>
         </div>
 
         {/* Description */}
-        <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-4 flex-grow line-clamp-3">
+        <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-4 flex-grow line-clamp-4">
           {description}
         </p>
 
         {/* Footer */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
-          <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 order-2 sm:order-1">
+        <div className="flex flex-col gap-3 mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
+          <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
             <FaUsers className="mr-2" />
             <span className="font-medium">{memberCount.toLocaleString()} members</span>
           </div>
@@ -154,7 +153,7 @@ const GroupCard = memo(({ id, name, language, memberCount, description, isJoined
           <button 
             onClick={handleJoinGroup}
             disabled={isJoining || buttonContent.disabled}
-            className={`px-4 py-2.5 text-white text-sm font-semibold rounded-lg active:scale-95 transform transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg min-w-[100px] flex items-center justify-center touch-manipulation order-1 sm:order-2 w-full sm:w-auto ${
+            className={`px-4 py-2.5 text-white text-sm font-semibold rounded-lg active:scale-95 transform transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg min-w-[100px] flex items-center justify-center touch-manipulation w-full ${
               buttonContent.className
             }`}
           >

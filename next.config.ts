@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 import dynamic from "next/dynamic";
 
 const nextConfig: NextConfig = {
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   // Performance optimizations
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',

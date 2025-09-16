@@ -165,50 +165,50 @@ const GroupsPage = () => {
   });
 
   return (
-    <div className="p-4 md:p-8 w-full">
+    <div className="p-2 md:p-4 w-full max-w-full">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">Discover Language Groups</h1>
-            <p className="text-gray-400">Join conversations with learners from around the world</p>
+            <h1 className="text-xl md:text-2xl font-bold text-white mb-1">Discover Language Groups</h1>
+            <p className="text-gray-400 text-sm">Join conversations with learners from around the world</p>
           </div>
           <button
             onClick={() => router.push('/groups/create')}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 md:px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 transform hover:scale-105 flex items-center justify-center space-x-2 w-full sm:w-auto"
+            className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-3 md:px-4 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 transform hover:scale-105 flex items-center justify-center space-x-2 w-full sm:w-auto text-sm"
           >
-            <FaPlus className="text-sm" />
+            <FaPlus className="text-xs" />
             <span>Create Group</span>
           </button>
         </div>
 
         {/* Search and Filter Bar */}
-        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-          <div className="flex flex-col gap-6">
+        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+          <div className="flex flex-col gap-4">
             {/* Search Input */}
-            <div className="relative w-full lg:w-1/2">
+            <div className="relative w-full">
               <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search groups by name or description..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
+                className="w-full pl-10 pr-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none text-sm"
               />
             </div>
 
-            {/* Filter Boxes - Vertical Stack as Visual Cards */}
-            <div className="flex flex-col gap-4 w-full lg:w-1/2">
+            {/* Filter Boxes - Horizontal Stack */}
+            <div className="flex flex-col sm:flex-row gap-3 w-full">
               {/* Language Filter Box */}
-              <div className="bg-gray-700 p-3 rounded-lg border border-gray-600">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  <FaGlobe className="inline mr-2" />
+              <div className="bg-gray-700 p-3 rounded-lg border border-gray-600 flex-1">
+                <label className="block text-xs font-medium text-gray-300 mb-1">
+                  <FaGlobe className="inline mr-1" />
                   Language
                 </label>
                 <select
                   value={selectedLanguage}
                   onChange={(e) => setSelectedLanguage(e.target.value)}
-                  className="w-full p-2 bg-gray-600 text-white rounded-lg border border-gray-500 focus:border-blue-500 focus:outline-none"
+                  className="w-full p-1.5 bg-gray-600 text-white rounded border border-gray-500 focus:border-blue-500 focus:outline-none text-sm"
                 >
                   <option value="">All Languages</option>
                   {languages.map(lang => (
@@ -218,15 +218,15 @@ const GroupsPage = () => {
               </div>
 
               {/* Level Filter Box */}
-              <div className="bg-gray-700 p-3 rounded-lg border border-gray-600">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  <FaStar className="inline mr-2" />
+              <div className="bg-gray-700 p-3 rounded-lg border border-gray-600 flex-1">
+                <label className="block text-xs font-medium text-gray-300 mb-1">
+                  <FaStar className="inline mr-1" />
                   Level
                 </label>
                 <select
                   value={selectedLevel}
                   onChange={(e) => setSelectedLevel(e.target.value)}
-                  className="w-full p-2 bg-gray-600 text-white rounded-lg border border-gray-500 focus:border-blue-500 focus:outline-none"
+                  className="w-full p-1.5 bg-gray-600 text-white rounded border border-gray-500 focus:border-blue-500 focus:outline-none text-sm"
                 >
                   <option value="">All Levels</option>
                   {levels.map(level => (
@@ -236,15 +236,15 @@ const GroupsPage = () => {
               </div>
 
               {/* Category Filter Box */}
-              <div className="bg-gray-700 p-3 rounded-lg border border-gray-600">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  <FaFilter className="inline mr-2" />
+              <div className="bg-gray-700 p-3 rounded-lg border border-gray-600 flex-1">
+                <label className="block text-xs font-medium text-gray-300 mb-1">
+                  <FaFilter className="inline mr-1" />
                   Category
                 </label>
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full p-2 bg-gray-600 text-white rounded-lg border border-gray-500 focus:border-blue-500 focus:outline-none"
+                  className="w-full p-1.5 bg-gray-600 text-white rounded border border-gray-500 focus:border-blue-500 focus:outline-none text-sm"
                 >
                   <option value="">All Categories</option>
                   {categories.map(category => (
@@ -264,7 +264,7 @@ const GroupsPage = () => {
                     setSelectedCategory('');
                     setSearchTerm('');
                   }}
-                  className="text-blue-400 hover:text-blue-300 font-medium text-sm"
+                  className="text-blue-400 hover:text-blue-300 font-medium text-xs"
                 >
                   Clear all filters
                 </button>
@@ -275,13 +275,13 @@ const GroupsPage = () => {
       </div>
 
       {/* Results Summary */}
-      <div className="mb-6">
+      <div className="mb-4">
         {loading ? (
-          <p className="text-gray-400">Loading groups...</p>
+          <p className="text-gray-400 text-sm">Loading groups...</p>
         ) : error ? (
-          <p className="text-red-400">⚠️ {error}</p>
+          <p className="text-red-400 text-sm">⚠️ {error}</p>
         ) : (
-          <p className="text-gray-400">
+          <p className="text-gray-400 text-sm">
             Showing {filteredGroups.length} of {allGroups.length} groups
           </p>
         )}
@@ -289,15 +289,15 @@ const GroupsPage = () => {
 
       {/* Loading State */}
       {loading && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map(i => (
-            <div key={i} className="bg-gray-800 rounded-xl border border-gray-700 p-6 animate-pulse">
-              <div className="h-6 bg-gray-700 rounded mb-4"></div>
+        <div className="grid grid-cols-2 gap-4">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+            <div key={i} className="bg-gray-800 rounded-lg border border-gray-700 p-4 animate-pulse min-h-[200px]">
+              <div className="h-5 bg-gray-700 rounded mb-3"></div>
               <div className="h-4 bg-gray-700 rounded mb-2 w-3/4"></div>
-              <div className="h-4 bg-gray-700 rounded mb-4 w-1/2"></div>
-              <div className="flex justify-between">
-                <div className="h-4 bg-gray-700 rounded w-1/4"></div>
-                <div className="h-4 bg-gray-700 rounded w-1/4"></div>
+              <div className="h-4 bg-gray-700 rounded mb-3 w-1/2"></div>
+              <div className="flex justify-between mt-auto">
+                <div className="h-4 bg-gray-700 rounded w-1/3"></div>
+                <div className="h-8 bg-gray-700 rounded w-1/4"></div>
               </div>
             </div>
           ))}
@@ -306,11 +306,11 @@ const GroupsPage = () => {
 
       {/* Error State */}
       {error && !loading && (
-        <div className="text-center py-12">
-          <p className="text-gray-400 mb-4">Unable to load groups from server</p>
+        <div className="text-center py-8">
+          <p className="text-gray-400 mb-3 text-sm">Unable to load groups from server</p>
           <button
             onClick={() => window.location.reload()}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+            className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm"
           >
             Retry
           </button>
@@ -319,7 +319,7 @@ const GroupsPage = () => {
 
       {/* Groups Grid */}
       {!loading && !error && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 gap-4">
           {filteredGroups.map(group => (
             <GroupCard
               key={group.id}
@@ -338,15 +338,15 @@ const GroupsPage = () => {
 
       {/* Empty State */}
       {!loading && !error && filteredGroups.length === 0 && (
-        <div className="text-center py-16">
-          <div className="w-24 h-24 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-6">
-            <FaUsers className="text-4xl text-gray-500" />
+        <div className="text-center py-12">
+          <div className="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+            <FaUsers className="text-3xl text-gray-500" />
           </div>
-          <h3 className="text-xl font-semibold text-white mb-2">No groups found</h3>
-          <p className="text-gray-400 mb-6">Try adjusting your search criteria or create a new group.</p>
+          <h3 className="text-lg font-semibold text-white mb-2">No groups found</h3>
+          <p className="text-gray-400 mb-4 text-sm">Try adjusting your search criteria or create a new group.</p>
           <button
             onClick={() => router.push('/groups/create')}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200"
+            className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 text-sm"
           >
             Create New Group
           </button>

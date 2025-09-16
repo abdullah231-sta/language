@@ -457,12 +457,12 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 w-full">
-      <div className="max-w-full">
+    <div className="p-3 sm:p-4 lg:p-6 w-full">
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">My Profile</h1>
-          <p className="text-gray-400">Manage your account settings and language preferences</p>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-white mb-1">My Profile</h1>
+          <p className="text-gray-400 text-sm">Manage your account settings and language preferences</p>
         </div>
 
         {/* Success Message */}
@@ -476,10 +476,10 @@ export default function ProfilePage() {
         {/* Profile Card */}
         <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
           {/* Profile Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 sm:p-8">
-            <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6">
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-4">
               <div className="relative">
-                <div className="w-24 h-24 sm:w-32 sm:h-32 bg-white rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                   {(profileImage || user.avatar) ? (
                     <img 
                       src={profileImage || user.avatar} 
@@ -487,7 +487,7 @@ export default function ProfilePage() {
                       className="w-full h-full rounded-full object-cover"
                     />
                   ) : (
-                    <span className="text-3xl sm:text-4xl text-gray-600 font-bold">
+                    <span className="text-2xl sm:text-3xl text-gray-600 font-bold">
                       {user.firstName.charAt(0)}{user.lastName.charAt(0)}
                     </span>
                   )}
@@ -496,8 +496,8 @@ export default function ProfilePage() {
                 {/* Country Flag Display - Preview in Edit Mode or Live Display */}
                 {((isEditing && formData.nationality && countryFlags[formData.nationality]) || 
                   (!isEditing && user.nationality && countryFlags[user.nationality])) && (
-                  <div className="absolute -bottom-1 -right-1 w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-full flex items-center justify-center shadow-lg border-2 border-gray-200">
-                    <span className="text-lg sm:text-xl">
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 sm:w-8 sm:h-8 bg-white rounded-full flex items-center justify-center shadow-lg border-2 border-gray-200">
+                    <span className="text-sm sm:text-lg">
                       {isEditing ? countryFlags[formData.nationality] : countryFlags[user.nationality]}
                     </span>
                   </div>
@@ -508,9 +508,9 @@ export default function ProfilePage() {
                   <div className="absolute -bottom-2 -right-2">
                     <label 
                       htmlFor="profile-image-upload"
-                      className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-700 transition-colors shadow-lg border-2 border-white"
+                      className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-700 transition-colors shadow-lg border-2 border-white"
                     >
-                      <FaCamera className="text-sm" />
+                      <FaCamera className="text-xs" />
                     </label>
                     <input
                       id="profile-image-upload"
@@ -524,13 +524,13 @@ export default function ProfilePage() {
               </div>
               
               <div className="text-center sm:text-left flex-1">
-                <h2 className="text-2xl sm:text-3xl font-bold text-white">
+                <h2 className="text-xl sm:text-2xl font-bold text-white">
                   {user.firstName} {user.lastName}
                 </h2>
-                <p className="text-blue-100 text-lg">@{user.username}</p>
-                <div className="flex items-center justify-center sm:justify-start space-x-2 mt-2 text-blue-100">
-                  <FaCalendarAlt className="text-sm" />
-                  <span className="text-sm">Joined {formatDate(user.joinedAt)}</span>
+                <p className="text-blue-100 text-base">@{user.username}</p>
+                <div className="flex items-center justify-center sm:justify-start space-x-2 mt-1 text-blue-100">
+                  <FaCalendarAlt className="text-xs" />
+                  <span className="text-xs">Joined {formatDate(user.joinedAt)}</span>
                 </div>
                 
                 {/* Image Upload Error */}
@@ -596,27 +596,27 @@ export default function ProfilePage() {
           </div>
 
           {/* Profile Content */}
-          <div className="p-6 sm:p-8">
+          <div className="p-4 sm:p-6">
             {!isEditing ? (
               // View Mode
-              <div className="space-y-8">
+              <div className="space-y-6">
                 {/* Personal Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <h3 className="text-xl font-semibold text-white mb-4 flex items-center space-x-2">
+                    <h3 className="text-lg font-semibold text-white mb-3 flex items-center space-x-2">
                       <FaUser />
                       <span>Personal Details</span>
                     </h3>
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       <div>
-                        <label className="block text-gray-400 text-sm mb-1">Email Address</label>
-                        <div className="text-white font-medium">{user.email}</div>
+                        <label className="block text-gray-400 text-xs mb-1">Email Address</label>
+                        <div className="text-white font-medium text-sm">{user.email}</div>
                       </div>
                       <div>
-                        <label className="block text-gray-400 text-sm mb-1">Nationality</label>
-                        <div className="text-white font-medium flex items-center space-x-2">
+                        <label className="block text-gray-400 text-xs mb-1">Nationality</label>
+                        <div className="text-white font-medium flex items-center space-x-2 text-sm">
                           {countryFlags[user.nationality] && (
-                            <span className="text-xl">{countryFlags[user.nationality]}</span>
+                            <span className="text-lg">{countryFlags[user.nationality]}</span>
                           )}
                           <span>{countryNames[user.nationality] || 'Country not specified'}</span>
                         </div>
@@ -625,31 +625,31 @@ export default function ProfilePage() {
                   </div>
 
                   <div>
-                    <h3 className="text-xl font-semibold text-white mb-4 flex items-center space-x-2">
+                    <h3 className="text-lg font-semibold text-white mb-3 flex items-center space-x-2">
                       <FaGlobe />
                       <span>Language Profile</span>
                     </h3>
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       <div>
-                        <label className="block text-gray-400 text-sm mb-2">Native Language</label>
-                        <div className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium inline-block">
+                        <label className="block text-gray-400 text-xs mb-1">Native Language</label>
+                        <div className="bg-green-600 text-white px-3 py-1 rounded-lg font-medium inline-block text-sm">
                           {user.nativeLanguage}
                         </div>
                       </div>
                       <div>
-                        <label className="block text-gray-400 text-sm mb-2">Learning Level</label>
-                        <div className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium inline-block">
-                          <FaGraduationCap className="inline mr-2" />
+                        <label className="block text-gray-400 text-xs mb-1">Learning Level</label>
+                        <div className="bg-blue-600 text-white px-3 py-1 rounded-lg font-medium inline-block text-sm">
+                          <FaGraduationCap className="inline mr-1" />
                           {user.level}
                         </div>
                       </div>
                       <div>
-                        <label className="block text-gray-400 text-sm mb-2">Target Languages</label>
-                        <div className="flex flex-wrap gap-2">
+                        <label className="block text-gray-400 text-xs mb-1">Target Languages</label>
+                        <div className="flex flex-wrap gap-1">
                           {user.targetLanguages.map((lang, index) => (
                             <span 
                               key={index}
-                              className="bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-medium"
+                              className="bg-purple-600 text-white px-2 py-1 rounded-full text-xs font-medium"
                             >
                               {lang}
                             </span>
@@ -661,91 +661,91 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Conversation Stats */}
-                <div className="mt-8">
+                <div className="mt-6">
                   <ConversationStats compact={true} showModal={true} />
                 </div>
               </div>
             ) : (
               // Edit Mode
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {/* General Error */}
                 {errors.general && (
-                  <div className="bg-red-900/30 border border-red-700 text-red-300 px-4 py-3 rounded-lg flex items-center space-x-2">
-                    <span className="text-lg">❌</span>
+                  <div className="bg-red-900/30 border border-red-700 text-red-300 px-3 py-2 rounded-lg flex items-center space-x-2 text-sm">
+                    <span className="text-base">❌</span>
                     <span>{errors.general}</span>
                   </div>
                 )}
 
                 {/* Personal Information Edit */}
                 <div>
-                  <h3 className="text-xl font-semibold text-white mb-4">Personal Details</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <h3 className="text-lg font-semibold text-white mb-3">Personal Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-gray-300 text-sm font-medium mb-2">First Name</label>
+                      <label className="block text-gray-300 text-xs font-medium mb-1">First Name</label>
                       <input
                         type="text"
                         name="firstName"
                         value={formData.firstName}
                         onChange={handleChange}
-                        className={`w-full px-4 py-3 bg-gray-700/50 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${
+                        className={`w-full px-3 py-2 bg-gray-700/50 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 text-sm ${
                           errors.firstName ? 'border-red-500 focus:ring-red-500' : 'border-gray-600 focus:ring-blue-500'
                         }`}
                         placeholder="Enter your first name"
                       />
                       {errors.firstName && (
-                        <p className="mt-1 text-sm text-red-400">{errors.firstName}</p>
+                        <p className="mt-1 text-xs text-red-400">{errors.firstName}</p>
                       )}
                     </div>
 
                     <div>
-                      <label className="block text-gray-300 text-sm font-medium mb-2">Last Name</label>
+                      <label className="block text-gray-300 text-xs font-medium mb-1">Last Name</label>
                       <input
                         type="text"
                         name="lastName"
                         value={formData.lastName}
                         onChange={handleChange}
-                        className={`w-full px-4 py-3 bg-gray-700/50 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${
+                        className={`w-full px-3 py-2 bg-gray-700/50 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 text-sm ${
                           errors.lastName ? 'border-red-500 focus:ring-red-500' : 'border-gray-600 focus:ring-blue-500'
                         }`}
                         placeholder="Enter your last name"
                       />
                       {errors.lastName && (
-                        <p className="mt-1 text-sm text-red-400">{errors.lastName}</p>
+                        <p className="mt-1 text-xs text-red-400">{errors.lastName}</p>
                       )}
                     </div>
 
                     <div>
-                      <label className="block text-gray-300 text-sm font-medium mb-2">Username</label>
+                      <label className="block text-gray-300 text-xs font-medium mb-1">Username</label>
                       <input
                         type="text"
                         name="username"
                         value={formData.username}
                         onChange={handleChange}
-                        className={`w-full px-4 py-3 bg-gray-700/50 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${
+                        className={`w-full px-3 py-2 bg-gray-700/50 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 text-sm ${
                           errors.username ? 'border-red-500 focus:ring-red-500' : 'border-gray-600 focus:ring-blue-500'
                         }`}
                         placeholder="Enter your username"
                       />
                       {errors.username && (
-                        <p className="mt-1 text-sm text-red-400">{errors.username}</p>
+                        <p className="mt-1 text-xs text-red-400">{errors.username}</p>
                       )}
                     </div>
 
                     <div>
-                      <label className="block text-gray-300 text-sm font-medium mb-2">Email Address</label>
-                      <div className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-400 cursor-not-allowed">
+                      <label className="block text-gray-300 text-xs font-medium mb-1">Email Address</label>
+                      <div className="w-full px-3 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-400 cursor-not-allowed text-sm">
                         {user.email}
                       </div>
                       <p className="mt-1 text-xs text-gray-500">Email cannot be changed for security reasons</p>
                     </div>
 
                     <div className="md:col-span-2">
-                      <label className="block text-gray-300 text-sm font-medium mb-2">Nationality</label>
+                      <label className="block text-gray-300 text-xs font-medium mb-1">Nationality</label>
                       <select
                         name="nationality"
                         value={formData.nationality}
                         onChange={handleChange}
-                        className={`w-full px-4 py-3 bg-gray-700/50 border rounded-lg text-white focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${
+                        className={`w-full px-3 py-2 bg-gray-700/50 border rounded-lg text-white focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 text-sm ${
                           errors.nationality ? 'border-red-500 focus:ring-red-500' : 'border-gray-600 focus:ring-blue-500'
                         }`}
                       >
@@ -757,7 +757,7 @@ export default function ProfilePage() {
                         ))}
                       </select>
                       {errors.nationality && (
-                        <p className="mt-1 text-sm text-red-400">{errors.nationality}</p>
+                        <p className="mt-1 text-xs text-red-400">{errors.nationality}</p>
                       )}
                     </div>
                   </div>
@@ -765,16 +765,16 @@ export default function ProfilePage() {
 
                 {/* Language Information Edit */}
                 <div>
-                  <h3 className="text-xl font-semibold text-white mb-4">Language Preferences</h3>
+                  <h3 className="text-lg font-semibold text-white mb-3">Language Preferences</h3>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     <div>
-                      <label className="block text-gray-300 text-sm font-medium mb-2">Native Language</label>
+                      <label className="block text-gray-300 text-xs font-medium mb-1">Native Language</label>
                       <select
                         name="nativeLanguage"
                         value={formData.nativeLanguage}
                         onChange={handleChange}
-                        className={`w-full px-4 py-3 bg-gray-700/50 border rounded-lg text-white focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${
+                        className={`w-full px-3 py-2 bg-gray-700/50 border rounded-lg text-white focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 text-sm ${
                           errors.nativeLanguage ? 'border-red-500 focus:ring-red-500' : 'border-gray-600 focus:ring-blue-500'
                         }`}
                       >
@@ -784,18 +784,18 @@ export default function ProfilePage() {
                         ))}
                       </select>
                       {errors.nativeLanguage && (
-                        <p className="mt-1 text-sm text-red-400">{errors.nativeLanguage}</p>
+                        <p className="mt-1 text-xs text-red-400">{errors.nativeLanguage}</p>
                       )}
                     </div>
 
                     <div>
-                      <label className="block text-gray-300 text-sm font-medium mb-2">Languages to Learn</label>
+                      <label className="block text-gray-300 text-xs font-medium mb-1">Languages to Learn</label>
                       {formData.targetLanguages.map((targetLang, index) => (
                         <div key={index} className="flex items-center space-x-2 mb-2">
                           <select
                             value={targetLang}
                             onChange={(e) => handleTargetLanguageChange(index, e.target.value)}
-                            className="flex-1 px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                            className="flex-1 px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm"
                           >
                             <option value="">Select a language</option>
                             {languages.filter(lang => lang !== formData.nativeLanguage && !formData.targetLanguages.includes(lang) || lang === targetLang).map(language => (
@@ -806,7 +806,7 @@ export default function ProfilePage() {
                             <button
                               type="button"
                               onClick={() => removeTargetLanguage(index)}
-                              className="p-2 text-red-400 hover:text-red-300 transition-colors"
+                              className="p-1 text-red-400 hover:text-red-300 transition-colors text-sm"
                             >
                               ❌
                             </button>
@@ -817,23 +817,23 @@ export default function ProfilePage() {
                         <button
                           type="button"
                           onClick={addTargetLanguage}
-                          className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
+                          className="text-blue-400 hover:text-blue-300 text-xs transition-colors"
                         >
                           + Add another language
                         </button>
                       )}
                       {errors.targetLanguages && (
-                        <p className="mt-1 text-sm text-red-400">{errors.targetLanguages}</p>
+                        <p className="mt-1 text-xs text-red-400">{errors.targetLanguages}</p>
                       )}
                     </div>
 
                     <div>
-                      <label className="block text-gray-300 text-sm font-medium mb-2">Learning Level</label>
+                      <label className="block text-gray-300 text-xs font-medium mb-1">Learning Level</label>
                       <select
                         name="level"
                         value={formData.level}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm"
                       >
                         <option value="Beginner" className="bg-gray-700">Beginner</option>
                         <option value="Intermediate" className="bg-gray-700">Intermediate</option>

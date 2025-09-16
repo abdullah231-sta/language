@@ -8,15 +8,12 @@ interface ConversationListItemProps {
 }
 
 const ConversationListItem = ({ name, lastMessage, avatarUrl, isActive = false }: ConversationListItemProps) => {
-  // Determine the background color based on whether the chat is active
-  const activeClass = isActive ? 'bg-blue-600 text-white' : 'hover:bg-gray-700 text-gray-200';
-
   return (
-    <div className={`flex items-center p-3 cursor-pointer rounded-lg transition ${activeClass}`}>
-      <img src={avatarUrl} alt={name} className="w-12 h-12 rounded-full object-cover mr-4" />
-      <div className="flex-1 overflow-hidden">
-        <h3 className={`font-semibold truncate ${isActive ? 'text-white' : 'text-gray-200'}`}>{name}</h3>
-        <p className={`text-sm truncate ${isActive ? 'text-gray-200' : 'text-gray-400'}`}>{lastMessage}</p>
+    <div className="flex items-center p-3">
+      <img src={avatarUrl} alt={name} className="w-10 h-10 rounded-full object-cover mr-3 flex-shrink-0" />
+      <div className="flex-1 overflow-hidden min-w-0">
+        <h3 className={`font-medium text-sm truncate ${isActive ? 'text-white' : 'text-gray-200'}`}>{name}</h3>
+        <p className={`text-xs truncate ${isActive ? 'text-gray-200' : 'text-gray-400'}`}>{lastMessage}</p>
       </div>
     </div>
   );

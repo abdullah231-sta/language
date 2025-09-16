@@ -122,12 +122,12 @@ const SettingsPage = () => {
 
   return (
     <>
-      <div className="p-4 sm:p-6 lg:p-8 w-full">
-        <div className="max-w-full">
+      <div className="p-3 sm:p-4 lg:p-6 w-full">
+        <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
-            <p className="text-gray-400">Manage your account preferences and application settings</p>
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-white mb-1">Settings</h1>
+            <p className="text-gray-400 text-sm">Manage your account preferences and application settings</p>
           </div>
 
           {/* Success Message */}
@@ -141,13 +141,13 @@ const SettingsPage = () => {
           {/* Settings Card */}
           <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
             {/* Settings Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 sm:p-8">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl sm:text-3xl font-bold text-white">
+                  <h2 className="text-xl sm:text-2xl font-bold text-white">
                     Application Settings
                   </h2>
-                  <p className="text-blue-100 mt-2">Configure your language learning experience</p>
+                  <p className="text-blue-100 mt-1 text-sm">Configure your language learning experience</p>
                 </div>
                 <div className="flex-shrink-0">
                   {!isEditing ? (
@@ -182,24 +182,24 @@ const SettingsPage = () => {
             </div>
 
             {/* Settings Content */}
-            <div className="p-6 sm:p-8">
+            <div className="p-4 sm:p-6">
               {!isEditing ? (
                 // View Mode
-                <div className="space-y-8">
+                <div className="space-y-6">
                   {/* Application Preferences */}
                   <div>
-                    <h3 className="text-xl font-semibold text-white mb-4 flex items-center space-x-2">
+                    <h3 className="text-lg font-semibold text-white mb-3 flex items-center space-x-2">
                       <FaPalette />
                       <span>Application Preferences</span>
                     </h3>
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       <div>
-                        <label className="block text-gray-400 text-sm mb-1">Display Language</label>
-                        <div className="text-white font-medium">{user.displayLanguage || 'English'}</div>
+                        <label className="block text-gray-400 text-xs mb-1">Display Language</label>
+                        <div className="text-white font-medium text-sm">{user.displayLanguage || 'English'}</div>
                       </div>
                       <div>
-                        <label className="block text-gray-400 text-sm mb-1">Automatic Translation</label>
-                        <div className="text-white font-medium">
+                        <label className="block text-gray-400 text-xs mb-1">Automatic Translation</label>
+                        <div className="text-white font-medium text-sm">
                           {user.automaticTranslation ? 'Enabled' : 'Disabled'}
                         </div>
                       </div>
@@ -208,28 +208,28 @@ const SettingsPage = () => {
 
                   {/* Account Actions */}
                   <div>
-                    <h3 className="text-xl font-semibold text-white mb-4 flex items-center space-x-2">
+                    <h3 className="text-lg font-semibold text-white mb-3 flex items-center space-x-2">
                       <FaGlobe />
                       <span>Account Actions</span>
                     </h3>
-                    <div className="space-y-4">
-                      <div className="p-4 bg-gray-700/50 rounded-lg">
+                    <div className="space-y-3">
+                      <div className="p-3 bg-gray-700/50 rounded-lg">
                         <div>
-                          <span className="font-medium text-white flex items-center">
+                          <span className="font-medium text-white flex items-center text-sm">
                             <FaEnvelope className="mr-2 text-gray-400" /> Email Address
                           </span>
-                          <p className="text-gray-400">{user.email}</p>
+                          <p className="text-gray-400 text-sm">{user.email}</p>
                           <p className="text-xs text-gray-500 mt-1">Email cannot be changed for security reasons</p>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between p-4 bg-gray-700/50 rounded-lg">
+                      <div className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
                         <div>
-                          <span className="font-medium text-white flex items-center">
+                          <span className="font-medium text-white flex items-center text-sm">
                             <FaLock className="mr-2 text-gray-400" /> Password
                           </span>
-                          <p className="text-gray-400">********</p>
+                          <p className="text-gray-400 text-sm">********</p>
                         </div>
-                        <button onClick={() => setPasswordModalOpen(true)} className="text-sm text-blue-400 hover:text-blue-300 transition-colors">
+                        <button onClick={() => setPasswordModalOpen(true)} className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
                           Change
                         </button>
                       </div>
@@ -237,15 +237,15 @@ const SettingsPage = () => {
                   </div>
 
                   {/* Danger Zone */}
-                  <div className="bg-red-900/20 border border-red-700 rounded-lg p-6">
-                    <h3 className="text-xl font-semibold text-red-400 mb-4 flex items-center space-x-2">
+                  <div className="bg-red-900/20 border border-red-700 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-red-400 mb-3 flex items-center space-x-2">
                       <FaExclamationTriangle />
                       <span>Danger Zone</span>
                     </h3>
-                    <p className="text-red-300 mb-4">These actions are permanent and cannot be undone.</p>
+                    <p className="text-red-300 mb-3 text-sm">These actions are permanent and cannot be undone.</p>
                     <button 
                       onClick={() => setDeleteModalOpen(true)} 
-                      className="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-red-50"
+                      className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-red-50 text-sm"
                     >
                       <FaExclamationTriangle className="mr-2" />
                       <span>Delete My Account</span>
@@ -253,11 +253,11 @@ const SettingsPage = () => {
                   </div>
 
                   {/* Logout Button */}
-                  <div className="flex justify-center pt-6 border-t border-gray-700">
+                  <div className="flex justify-center pt-4 border-t border-gray-700">
                     <button 
                       onClick={handleLogout}
                       disabled={isLoggingOut}
-                      className="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                      className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm"
                     >
                       {isLoggingOut ? (
                         <>
@@ -275,26 +275,26 @@ const SettingsPage = () => {
                 </div>
               ) : (
                 // Edit Mode
-                <div className="space-y-6">
+                <div className="space-y-4">
                   {/* General Error */}
                   {errors.general && (
-                    <div className="bg-red-900/30 border border-red-700 text-red-300 px-4 py-3 rounded-lg flex items-center space-x-2">
-                      <span className="text-lg">❌</span>
+                    <div className="bg-red-900/30 border border-red-700 text-red-300 px-3 py-2 rounded-lg flex items-center space-x-2 text-sm">
+                      <span className="text-base">❌</span>
                       <span>{errors.general}</span>
                     </div>
                   )}
 
                   {/* Application Preferences Edit */}
                   <div>
-                    <h3 className="text-xl font-semibold text-white mb-4">Application Preferences</h3>
-                    <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-white mb-3">Application Preferences</h3>
+                    <div className="space-y-3">
                       <div>
-                        <label className="block text-gray-300 text-sm font-medium mb-2">Display Language</label>
+                        <label className="block text-gray-300 text-xs font-medium mb-1">Display Language</label>
                         <select
                           name="displayLanguage"
                           value={formData.displayLanguage}
                           onChange={handleChange}
-                          className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                          className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm"
                         >
                           <option value="English" className="bg-gray-700">English</option>
                           <option value="Arabic" className="bg-gray-700">Arabic (العربية)</option>
@@ -307,10 +307,10 @@ const SettingsPage = () => {
                         </select>
                       </div>
 
-                      <div className="flex items-center justify-between p-4 bg-gray-700/50 rounded-lg">
+                      <div className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
                         <div>
-                          <span className="font-medium text-white">Automatic Translation</span>
-                          <p className="text-gray-400 text-sm">Automatically translate messages in conversations</p>
+                          <span className="font-medium text-white text-sm">Automatic Translation</span>
+                          <p className="text-gray-400 text-xs">Automatically translate messages in conversations</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input 
