@@ -107,7 +107,7 @@ class WebSocketManager {
         break;
       
       case 'typing_stop':
-        if (message.groupId) this.handleTypingStop(clientId, message.groupId);
+        // Typing stop not implemented (no-op)
         break;
       
       case 'reaction':
@@ -185,8 +185,8 @@ class WebSocketManager {
     const client = this.clients.get(clientId);
     if (!client || !client.groupId) return;
 
-    // Stop typing when message is sent
-    this.handleTypingStop(clientId, client.groupId);
+  // Stop typing when message is sent (not implemented)
+  // this.handleTypingStop(clientId, client.groupId);
 
     // Broadcast message to all group members
     this.broadcastToGroup(client.groupId, {

@@ -1158,7 +1158,7 @@ const GroupPage = ({ params }: { params: Promise<{ groupId: string }> | { groupI
                       seatPosition={seat.position}
                       isCurrentUser={seat.user.id === user?.id}
                       groupId={groupId}
-                      onVoiceControlChange={handleVoiceControlChange}
+                      // onVoiceControlChange={handleVoiceControlChange}
                       onEmojiReaction={handleEmojiReaction}
                     />
                   )}
